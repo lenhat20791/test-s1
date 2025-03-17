@@ -435,6 +435,17 @@ class PivotData:
             return -1
         return 0    
         
+    def remove_pivot(self, pivot_to_remove):
+        """Xóa một pivot cụ thể"""
+        try:
+            if pivot_to_remove["source"] == "system":
+                self.detected_pivots = [p for p in self.detected_pivots if p != pivot_to_remove]
+            else:
+                self.user_provided_pivots = [p for p in self.user_provided_pivots if p != pivot_to_remove]
+            save_log(f"Đã xóa pivot: {pivot_to_remove}", DEBUG_LOG_FILE)
+        except Exception as e:
+            save_log(f"Lỗi khi xóa pivot: {str(e)}", DEBUG_LOG_FILE)  
+        
 # Initialize PivotData instance
 pivot_data = PivotData()
 
@@ -586,35 +597,53 @@ def get_binance_price(context: CallbackContext):
         save_log(f"Binance API Error: {e}", DEBUG_LOG_FILE)
         
 def schedule_next_run(job_queue):
-    # lên lịch chạy khi chẵn 5p
-    now = datetime.now()
-    next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=(5 - now.minute % 5))
-    delay = (next_run - now).total_seconds()
-    
-    save_log(f"Lên lịch chạy vào {next_run.strftime('%Y-%m-%d %H:%M:%S')}", DEBUG_LOG_FILE)
+    try:
+        # lên lịch chạy khi chẵn 5p
+        now = datetime.now()
+        next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=(5 - now.minute % 5))
+        delay = (next_run - now).total_seconds()
+        
+        save_log(f"Lên lịch chạy vào {next_run.strftime('%Y-%m-%d %H:%M:%S')}", DEBUG_LOG_FILE)
         job_queue.run_repeating(get_binance_price, interval=300, first=delay)
     except Exception as e:
         logger.error(f"Error scheduling next run: {e}")
         save_log(f"Error scheduling next run: {e}", DEBUG_LOG_FILE)
 
 def detect_pivot(price, price_type):
+    """Phát hiện và xử lý pivot points"""
     try:
-        # Phân tích xu hướng
+        current_time = datetime.now().strftime("%H:%M")
+        all_pivots = pivot_data.get_all_pivots()
+        
+        # Kiểm tra pivot trong cùng thời điểm
+        for pivot in all_pivots:
+            if pivot["time"] == current_time:
+                # Tính toán biên độ giá
+                current_price_change = abs(price - (all_pivots[-1]["price"] if all_pivots else price)) / price
+                existing_price_change = abs(pivot["price"] - (all_pivots[-2]["price"] if len(all_pivots) > 1 else pivot["price"])) / pivot["price"]
+                
+                save_log(f"So sánh biên độ: Hiện tại {current_price_change:.2%} vs Cũ {existing_price_change:.2%}", DEBUG_LOG_FILE)
+                
+                if current_price_change <= existing_price_change:
+                    save_log(f"Bỏ qua pivot tại {current_time} do đã có pivot mạnh hơn (giá: ${price:,.2f})", DEBUG_LOG_FILE)
+                    return
+                else:
+                    save_log(f"Xóa pivot cũ {pivot['type']} (${pivot['price']:,.2f}) để thêm pivot mới có biên độ lớn hơn", DEBUG_LOG_FILE)
+                    pivot_data.remove_pivot(pivot)
+
+        # Phân tích xu hướng với số liệu đã điều chỉnh
         trend_analysis = pivot_data.analyze_market_trend()
         trend = trend_analysis.get("trend", "Unknown")
         save_log(f"Xu hướng hiện tại: {trend}", DEBUG_LOG_FILE)
 
         # Thêm pivot mới
         if pivot_data.add_detected_pivot(price, price_type):
-            save_log(f"Đã thêm pivot mới: {price_type} - Giá: ${price:,.2f}", DEBUG_LOG_FILE)
-            
-            # Kiểm tra và lưu vào Excel
+            save_log(f"Đã thêm pivot mới: {price_type} - Giá: ${price:,.2f} vào lúc {current_time}", DEBUG_LOG_FILE)
             save_to_excel()
             
             # Kiểm tra mẫu hình
             has_pattern, pattern_name = pivot_data.check_pattern()
             if has_pattern:
-                # Tạo thông báo chi tiết
                 recent_pivots = pivot_data.get_recent_pivots(5)
                 message = _create_alert_message(pattern_name, price, recent_pivots)
                 send_alert(message)
