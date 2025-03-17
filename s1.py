@@ -40,59 +40,223 @@ user_provided_pivots = []  # Stores pivots provided via /moc command
 # Initialize Binance Client
 binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
+class PivotData:
+    def __init__(self):
+        self.detected_pivots = []  # Lưu các pivot tự động phát hiện (tối đa 15)
+        self.user_provided_pivots = []  # Lưu các pivot từ người dùng qua lệnh /moc
+        self.MIN_PRICE_CHANGE = 0.005  # 0.5% thay đổi giá tối thiểu
+        self.MIN_PIVOT_DISTANCE = 3  # Khoảng cách tối thiểu giữa các pivot (số nến)
+        self.TREND_WINDOW = 10  # Số nến để xác định xu hướng
+        self.MAX_PIVOTS = 15  # Số lượng pivot tối đa lưu trữ
+        self.last_sync_time = datetime.now()
+
+    def add_user_pivot(self, pivot_type: str, price: float, time: str) -> bool:
+        """Thêm pivot từ lệnh /moc của user"""
+        try:
+            new_pivot = {
+                "type": pivot_type.upper(),
+                "price": price,
+                "time": time,
+                "source": "user"
+            }
+            self.user_provided_pivots.append(new_pivot)
+            
+            # Giới hạn số lượng pivot
+            if len(self.user_provided_pivots) > self.MAX_PIVOTS:
+                self.user_provided_pivots.pop(0)
+            
+            save_log(f"User pivot added: {pivot_type} at {time} price: ${price}", DEBUG_LOG_FILE)
+            return True
+        except Exception as e:
+            save_log(f"Error adding user pivot: {str(e)}", DEBUG_LOG_FILE)
+            return False
+
+    def add_detected_pivot(self, price: float, price_type: str) -> bool:
+        """Thêm pivot từ hệ thống tự động phát hiện"""
+        try:
+            # Kiểm tra điều kiện thêm pivot
+            if not self._can_add_pivot(price):
+                return False
+
+            # Xác định loại pivot
+            pivot_type = self._determine_pivot_type(price, price_type)
+            if not pivot_type:
+                return False
+
+            # Tạo pivot mới
+            new_pivot = {
+                "type": pivot_type,
+                "price": price,
+                "time": datetime.now().strftime("%H:%M"),
+                "source": "system"
+            }
+            self.detected_pivots.append(new_pivot)
+
+            # Giới hạn số lượng pivot
+            if len(self.detected_pivots) > self.MAX_PIVOTS:
+                self.detected_pivots.pop(0)
+
+            save_log(f"Detected pivot: {pivot_type} at {new_pivot['time']} price: ${price}", DEBUG_LOG_FILE)
+            return True
+        except Exception as e:
+            save_log(f"Error adding detected pivot: {str(e)}", DEBUG_LOG_FILE)
+            return False
+
+    def _can_add_pivot(self, price: float) -> bool:
+        """Kiểm tra các điều kiện để thêm pivot mới"""
+        combined_pivots = self.get_all_pivots()
+        if not combined_pivots:
+            return True
+
+        # Kiểm tra khoảng cách thời gian
+        last_pivot = combined_pivots[-1]
+        last_time = datetime.strptime(last_pivot["time"], "%H:%M")
+        current_time = datetime.now()
+        time_diff = (current_time - last_time).total_seconds() / 300  # Đổi sang số nến 5m
+        
+        if time_diff < self.MIN_PIVOT_DISTANCE:
+            save_log(f"Pivot too close in time: {time_diff} candles", DEBUG_LOG_FILE)
+            return False
+
+        # Kiểm tra biến động giá
+        price_change = abs(price - last_pivot["price"]) / last_pivot["price"]
+        if price_change < self.MIN_PRICE_CHANGE:
+            save_log(f"Price change too small: {price_change:.2%}", DEBUG_LOG_FILE)
+            return False
+
+        return True
+
+    def get_all_pivots(self) -> list:
+        """Lấy tất cả pivot đã sắp xếp theo thời gian"""
+        all_pivots = self.user_provided_pivots + self.detected_pivots
+        all_pivots.sort(key=lambda x: datetime.strptime(x["time"], "%H:%M"))
+        return all_pivots
+
+    def clear_all(self):
+        """Xóa tất cả pivot points"""
+        self.detected_pivots.clear()
+        self.user_provided_pivots.clear()
+        save_log("All pivot points cleared", DEBUG_LOG_FILE)
+
+    def get_recent_pivots(self, count: int = 5) -> list:
+        """Lấy số lượng pivot gần nhất"""
+        all_pivots = self.get_all_pivots()
+        return all_pivots[-count:] if all_pivots else []
+
+    def check_pattern(self) -> tuple[bool, str]:
+        """Kiểm tra mẫu hình và trả về (có_mẫu_hình, tên_mẫu_hình)"""
+        patterns = {
+            "bullish_reversal": [
+                ["HH", "HL", "HH", "HL", "HH"],
+                ["LH", "HL", "HH", "HL", "HH"],
+                ["HH", "HH", "HH"],
+                ["HH", "HL", "HH", "HH"]
+            ],
+            "bearish_reversal": [
+                ["LL", "LL", "LH", "LL"],
+                ["LL", "LH", "LL", "LH", "LL"],
+                ["LL", "LL", "LL"],
+                ["LL", "LH", "LL", "LH", "LL"],
+                ["LL", "LH", "LL"]
+            ]
+        }
+
+        last_pivots = [p["type"] for p in self.get_all_pivots()]
+        for pattern_name, sequences in patterns.items():
+            for sequence in sequences:
+                if len(last_pivots) >= len(sequence):
+                    if last_pivots[-len(sequence):] == sequence:
+                        save_log(f"Pattern found: {pattern_name} ({','.join(sequence)})", PATTERN_LOG_FILE)
+                        return True, pattern_name
+        return False, ""
+
 def save_log(log_message, filename):
     """ Save log messages to a text file """
     with open(filename, "a", encoding="utf-8") as f:
         f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} [INFO] - {log_message}\n")
 
 def save_to_excel():
-    """ Saves pivot data to an Excel file with a chart."""
+    """ 
+    Lưu dữ liệu pivot vào file Excel với các cải tiến:
+    - Phân biệt pivot từ user và hệ thống
+    - Thêm biểu đồ candlestick
+    - Cải thiện định dạng và bố cục
+    """
     try:
-        if not detected_pivots:
+        all_pivots = pivot_data.get_all_pivots()
+        if not all_pivots:
             save_log("No pivot data to save", DEBUG_LOG_FILE)
             return
         
         wb = Workbook()
-        ws = wb.active
-        ws.title = "Pivot Points"
+        # Tạo worksheet cho pivot points
+        ws_pivot = wb.active
+        ws_pivot.title = "Pivot Points"
         
         # Định dạng tiêu đề
-        headers = ["Time", "Type", "Price", "Change %"]
+        headers = ["Time", "Type", "Price", "Source", "Change %", "Trend"]
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col)
+            cell = ws_pivot.cell(row=1, column=col)
             cell.value = header
             cell.font = Font(bold=True)
             cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
             cell.alignment = Alignment(horizontal="center")
-            ws.column_dimensions[get_column_letter(col)].width = 15
-        
-        # Thêm dữ liệu với phần trăm thay đổi
+            ws_pivot.column_dimensions[get_column_letter(col)].width = 15
+
+        # Thêm dữ liệu với định dạng màu và tính toán bổ sung
         prev_price = None
-        for idx, pivot in enumerate(detected_pivots, 2):
-            ws.cell(row=idx, column=1, value=pivot["time"])
-            ws.cell(row=idx, column=2, value=pivot["type"])
-            ws.cell(row=idx, column=3, value=pivot["price"])
+        trend = "N/A"
+        
+        for idx, pivot in enumerate(all_pivots, 2):
+            # Thêm thông tin cơ bản
+            ws_pivot.cell(row=idx, column=1, value=pivot["time"])
+            ws_pivot.cell(row=idx, column=2, value=pivot["type"])
+            ws_pivot.cell(row=idx, column=3, value=pivot["price"])
+            ws_pivot.cell(row=idx, column=4, value=pivot["source"])
             
-            # Tính % thay đổi
+            # Tính % thay đổi và xu hướng
             if prev_price:
                 change = ((pivot["price"] - prev_price) / prev_price) * 100
-                ws.cell(row=idx, column=4, value=f"{change:+.2f}%")
+                ws_pivot.cell(row=idx, column=5, value=f"{change:+.2f}%")
+                
+                # Xác định xu hướng
+                if change > 0:
+                    trend = "↗ Tăng"
+                    cell_color = "00FF00"  # Màu xanh lá
+                elif change < 0:
+                    trend = "↘ Giảm"
+                    cell_color = "FF0000"  # Màu đỏ
+                else:
+                    trend = "→ Đi ngang"
+                    cell_color = "FFFF00"  # Màu vàng
+                
+                # Thêm xu hướng và định dạng màu
+                trend_cell = ws_pivot.cell(row=idx, column=6, value=trend)
+                trend_cell.fill = PatternFill(start_color=cell_color, end_color=cell_color, fill_type="solid")
+                
             prev_price = pivot["price"]
             
-            # Căn giữa các ô
-            for col in range(1, 5):
-                ws.cell(row=idx, column=col).alignment = Alignment(horizontal="center")
-        
+            # Định dạng các ô
+            for col in range(1, 7):
+                cell = ws_pivot.cell(row=idx, column=col)
+                cell.alignment = Alignment(horizontal="center")
+                
+                # Thêm màu nền cho các pivot từ user
+                if pivot["source"] == "user":
+                    cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
+
         # Tạo biểu đồ
         chart = LineChart()
         chart.title = "Pivot Points Analysis"
-        chart.style = 13  # Chọn style đẹp cho biểu đồ
+        chart.style = 13
+        chart.height = 15
+        chart.width = 30
         
         # Dữ liệu cho biểu đồ
-        data = Reference(ws, min_col=3, min_row=1, max_row=len(detected_pivots) + 1)
-        categories = Reference(ws, min_col=1, min_row=2, max_row=len(detected_pivots) + 1)
+        data = Reference(ws_pivot, min_col=3, min_row=1, max_row=len(all_pivots) + 1)
+        categories = Reference(ws_pivot, min_col=1, min_row=2, max_row=len(all_pivots) + 1)
         
-        # Thêm series và đặt màu
+        # Thêm series và định dạng
         chart.add_data(data, titles_from_data=True)
         chart.set_categories(categories)
         
@@ -101,12 +265,27 @@ def save_to_excel():
         chart.y_axis.title = "Price (USD)"
         chart.x_axis.tickLblSkip = 2
         
-        # Thêm biểu đồ vào worksheet
-        ws.add_chart(chart, "F2")
+        # Thêm các điểm đánh dấu
+        series = chart.series[0]
+        series.marker.symbol = "circle"
+        series.marker.size = 8
         
-        # Lưu file - sử dụng biến toàn cục EXCEL_FILE
+        # Thêm biểu đồ vào worksheet
+        ws_pivot.add_chart(chart, "H2")
+        
+        # Thêm thông tin tổng hợp
+        summary_row = len(all_pivots) + 4
+        ws_pivot.cell(row=summary_row, column=1, value="Thống kê:")
+        ws_pivot.cell(row=summary_row + 1, column=1, value="Tổng số pivot:")
+        ws_pivot.cell(row=summary_row + 1, column=2, value=len(all_pivots))
+        ws_pivot.cell(row=summary_row + 2, column=1, value="Pivot từ user:")
+        ws_pivot.cell(row=summary_row + 2, column=2, value=len([p for p in all_pivots if p["source"] == "user"]))
+        ws_pivot.cell(row=summary_row + 3, column=1, value="Pivot từ hệ thống:")
+        ws_pivot.cell(row=summary_row + 3, column=2, value=len([p for p in all_pivots if p["source"] == "system"]))
+        
+        # Lưu file
         wb.save(EXCEL_FILE)
-        save_log(f"Pivot data saved to Excel with {len(detected_pivots)} points", DEBUG_LOG_FILE)
+        save_log(f"Pivot data saved to Excel with {len(all_pivots)} points", DEBUG_LOG_FILE)
         
     except Exception as e:
         error_msg = f"Error saving Excel file: {str(e)}"
@@ -146,71 +325,97 @@ def detect_pivot(price, price_type):
     - Phân tích xu hướng tổng thể
     - Lọc nhiễu
     - Xác định điểm pivot chính xác hơn
+    - Lưu trữ pivot data cấu trúc
     """
-    global detected_pivots, user_provided_pivots
-    
-    MIN_PRICE_CHANGE = 0.005  # 0.5% thay đổi giá tối thiểu
-    MIN_PIVOT_DISTANCE = 3    # Khoảng cách tối thiểu giữa các pivot (theo số nến)
-    TREND_WINDOW = 10         # Số nến để xác định xu hướng
-    
-    # Kết hợp pivots từ người dùng và tự động phát hiện
-    combined_pivots = user_provided_pivots + detected_pivots
-    
-    # 1. Kiểm tra khoảng cách với pivot gần nhất
-    if len(combined_pivots) > 0:
-        last_pivot_time = datetime.strptime(combined_pivots[-1]["time"], "%H:%M")
-        current_time = datetime.now()
-        time_diff = (current_time - last_pivot_time).total_seconds() / 300  # Đổi sang số nến 5m
-        if time_diff < MIN_PIVOT_DISTANCE:
-            save_log(f"Bỏ qua pivot - quá gần pivot trước ({time_diff} nến)", DEBUG_LOG_FILE)
-            return
+    try:
+        # Phân tích xu hướng
+        trend = _analyze_trend(pivot_data.get_all_pivots())
+        save_log(f"Xu hướng hiện tại: {'Tăng' if trend > 0 else 'Giảm' if trend < 0 else 'Đi ngang'}", DEBUG_LOG_FILE)
 
-    # 2. Lọc nhiễu dựa trên biên độ giá
-    if len(combined_pivots) > 0:
-        last_price = combined_pivots[-1]["price"]
-        price_change = abs(price - last_price) / last_price
-        if price_change < MIN_PRICE_CHANGE:
-            save_log(f"Bỏ qua pivot - biến động giá quá nhỏ ({price_change:.2%})", DEBUG_LOG_FILE)
-            return
+        # Thêm pivot mới
+        if pivot_data.add_detected_pivot(price, price_type):
+            save_log(f"Đã thêm pivot mới: {price_type} - Giá: ${price:,.2f}", DEBUG_LOG_FILE)
+            
+            # Kiểm tra và lưu vào Excel
+            save_to_excel()
+            
+            # Kiểm tra mẫu hình
+            has_pattern, pattern_name = pivot_data.check_pattern()
+            if has_pattern:
+                # Tạo thông báo chi tiết
+                recent_pivots = pivot_data.get_recent_pivots(5)  # Lấy 5 pivot gần nhất
+                message = _create_alert_message(pattern_name, price, recent_pivots)
+                send_alert(message)
+                
+    except Exception as e:
+        error_msg = f"Lỗi trong quá trình phát hiện pivot: {str(e)}"
+        save_log(error_msg, DEBUG_LOG_FILE)
+        logger.error(error_msg)
 
-    # 3. Xác định xu hướng tổng thể
-    def calculate_trend(prices, window=TREND_WINDOW):
-        if len(prices) < window:
-            return 0
-        
-        recent_prices = prices[-window:]
-        price_changes = [recent_prices[i] - recent_prices[i-1] for i in range(1, len(recent_prices))]
-        trend = sum(1 for x in price_changes if x > 0) - sum(1 for x in price_changes if x < 0)
-        return trend
+def _analyze_trend(pivots, window=10):
+    """Phân tích xu hướng dựa trên các pivot gần đây"""
+    if len(pivots) < window:
+        return 0
+    
+    recent_pivots = pivots[-window:]
+    prices = [p["price"] for p in recent_pivots]
+    price_changes = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+    
+    # Tính toán xu hướng
+    up_moves = sum(1 for x in price_changes if x > 0)
+    down_moves = sum(1 for x in price_changes if x < 0)
+    
+    # Tính % thay đổi tổng thể
+    total_change = (prices[-1] - prices[0]) / prices[0] * 100
+    
+    # Kết hợp số lượng move và % thay đổi để xác định xu hướng
+    if up_moves > down_moves and total_change > 1:  # Tăng rõ ràng
+        return 2
+    elif up_moves > down_moves:  # Tăng nhẹ
+        return 1
+    elif down_moves > up_moves and total_change < -1:  # Giảm rõ ràng
+        return -2
+    elif down_moves > up_moves:  # Giảm nhẹ
+        return -1
+    return 0  # Đi ngang
 
-    # 4. Xác định loại pivot dựa trên xu hướng và giá
-    if len(combined_pivots) < 5:
-        # Xử lý trường hợp ít dữ liệu
-        pivot_type = determine_initial_pivot_type(price, price_type, combined_pivots)
+def _create_alert_message(pattern_name, current_price, recent_pivots):
+    """Tạo thông báo chi tiết khi phát hiện mẫu hình"""
+    vietnam_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Xác định loại mẫu hình và biểu tượng
+    if "bullish" in pattern_name.lower():
+        pattern_symbol = "🟢"
+        direction = "tăng"
     else:
-        recent_prices = [p["price"] for p in combined_pivots[-TREND_WINDOW:]]
-        trend = calculate_trend(recent_prices)
-        pivot_type = determine_pivot_type(price, price_type, combined_pivots, trend)
+        pattern_symbol = "🔴"
+        direction = "giảm"
+        
+    message = (
+        f"{pattern_symbol} CẢNH BÁO MẪU HÌNH {direction.upper()} - {vietnam_time}\n\n"
+        f"Giá hiện tại: ${current_price:,.2f}\n"
+        f"Mẫu hình: {pattern_name}\n\n"
+        f"5 pivot gần nhất:\n"
+    )
+    
+    # Thêm thông tin về 5 pivot gần nhất
+    for i, pivot in enumerate(recent_pivots[::-1], 1):
+        message += f"{i}. {pivot['type']}: ${pivot['price']:,.2f} ({pivot['time']})\n"
+        
+    return message
 
-    # 5. Thêm pivot mới nếu hợp lệ
-    if pivot_type:
-        new_pivot = {
-            "type": pivot_type,
-            "price": price,
-            "time": datetime.now().strftime("%H:%M")
-        }
-        detected_pivots.append(new_pivot)
-        
-        # Giữ tối đa 15 pivot gần nhất
-        if len(detected_pivots) > 15:
-            detected_pivots.pop(0)
-        
-        save_log(f"Xác định {pivot_type} - Giá: {price}", PATTERN_LOG_FILE)
-        save_to_excel()
-        
-        # Kiểm tra mẫu hình
-        if check_pattern():
-            send_alert()
+def send_alert(message):
+    """Gửi cảnh báo qua Telegram với thông tin chi tiết"""
+    try:
+        bot = Bot(token=TOKEN)
+        bot.send_message(
+            chat_id=CHAT_ID,
+            text=message,
+            parse_mode='HTML'
+        )
+        save_log("Đã gửi cảnh báo mẫu hình", DEBUG_LOG_FILE)
+    except Exception as e:
+        save_log(f"Lỗi gửi cảnh báo: {str(e)}", DEBUG_LOG_FILE)
 
 def determine_initial_pivot_type(price, price_type, pivots):
     """Xác định loại pivot khi có ít dữ liệu"""
