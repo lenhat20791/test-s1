@@ -40,6 +40,9 @@ user_provided_pivots = []  # Stores pivots provided via /moc command
 # Initialize Binance Client
 binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
+# Initialize PivotData instance
+pivot_data = PivotData()
+
 class PivotData:
     def __init__(self):
         self.detected_pivots = []  # Lưu các pivot tự động phát hiện (tối đa 15)
@@ -50,6 +53,16 @@ class PivotData:
         self.MAX_PIVOTS = 15  # Số lượng pivot tối đa lưu trữ
         self.last_sync_time = datetime.now()
 
+def add_price_data(self, price_data: dict):
+    """Thêm dữ liệu giá mới vào price_history"""
+    if not hasattr(self, 'price_history'):
+        self.price_history = []
+    
+    self.price_history.append(price_data)
+    if len(self.price_history) > 100:  # Giữ 100 điểm dữ liệu gần nhất
+        self.price_history.pop(0)
+    save_log(f"Đã thêm dữ liệu giá: {price_data}", DEBUG_LOG_FILE)
+    
     def add_user_pivot(self, pivot_type: str, price: float, time: str) -> bool:
         """Thêm pivot từ lệnh /moc của user"""
         try:
@@ -125,6 +138,78 @@ class PivotData:
             return False
 
         return True
+       
+    def _determine_pivot_type(self, price: float, price_type: str) -> str:
+        """Xác định loại pivot dựa trên xu hướng và cấu trúc giá"""
+        try:
+            all_pivots = self.get_all_pivots()
+            if len(all_pivots) < 5:
+                return self._determine_initial_pivot_type(price, price_type, all_pivots)
+                
+            last_5_pivots = [p["price"] for p in all_pivots[-5:]]
+            if len(last_5_pivots) < 5:
+                return self._determine_initial_pivot_type(price, price_type, all_pivots)
+                
+            a, b, c, d, e = last_5_pivots
+            trend = self._calculate_trend(last_5_pivots)
+            
+            if price_type == "H":
+                if trend > 0:  # Xu hướng tăng
+                    if price > max(last_5_pivots):
+                        return "HH"
+                    elif c > b and c > d and price > c:
+                        return "HH"
+                    else:
+                        return "LH"
+                else:  # Xu hướng giảm
+                    if price < min(last_5_pivots):
+                        return "LH"
+                    else:
+                        return self._verify_lower_high(price, last_5_pivots)
+            else:  # price_type == "L"
+                if trend < 0:  # Xu hướng giảm
+                    if price < min(last_5_pivots):
+                        return "LL"
+                    elif c < b and c < d and price < c:
+                        return "LL"
+                    else:
+                        return "HL"
+                else:  # Xu hướng tăng
+                    if price > max(last_5_pivots):
+                        return "HL"
+                    else:
+                        return self._verify_higher_low(price, last_5_pivots)
+                        
+        except Exception as e:
+            save_log(f"Error determining pivot type: {str(e)}", DEBUG_LOG_FILE)
+            return None
+
+    def _determine_initial_pivot_type(self, price: float, price_type: str, pivots: list) -> str:
+        """Xác định loại pivot khi có ít dữ liệu"""
+        if not pivots:
+            return "HH" if price_type == "H" else "LL"
+        
+        last_pivot = pivots[-1]
+        if price_type == "H":
+            return "HH" if price > last_pivot["price"] else "LH"
+        else:
+            return "LL" if price < last_pivot["price"] else "HL"
+
+    def _verify_lower_high(self, price: float, prices: list) -> str:
+        """Xác minh điểm LH"""
+        higher_prices = [p for p in prices if p > price]
+        if not higher_prices:
+            return None
+        avg_high = sum(higher_prices) / len(higher_prices)
+        return "LH" if price < avg_high else None
+
+    def _verify_higher_low(self, price: float, prices: list) -> str:
+        """Xác minh điểm HL"""
+        lower_prices = [p for p in prices if p < price]
+        if not lower_prices:
+            return None
+        avg_low = sum(lower_prices) / len(lower_prices)
+        return "HL" if price > avg_low else None
 
     def get_all_pivots(self) -> list:
         """Lấy tất cả pivot đã sắp xếp theo thời gian"""
@@ -469,7 +554,177 @@ def verify_higher_low(price, prices):
     """Xác minh điểm HL"""
     avg_low = sum(p for p in prices if p < price) / len([p for p in prices if p < price])
     return "HL" if price > avg_low else None
-   
+def get_pivot_support_resistance(self, lookback: int = 20) -> dict:
+    """
+    Tính toán các mức hỗ trợ và kháng cự dựa trên pivot points
+    Returns:
+        Dict chứa các mức S/R và độ mạnh của chúng
+    """
+    try:
+        if not hasattr(self, 'price_history') or len(self.price_history) < lookback:
+            save_log(f"Không đủ dữ liệu để tính S/R (cần {lookback})", DEBUG_LOG_FILE)
+            return {}
+
+        # Lấy dữ liệu trong khoảng lookback
+        recent_data = self.price_history[-lookback:]
+        
+        # Tính PP (Pivot Point)
+        highs = [x['high'] for x in recent_data]
+        lows = [x['low'] for x in recent_data]
+        closes = [x['price'] for x in recent_data]
+        
+        pp = (max(highs) + min(lows) + closes[-1]) / 3
+        
+        # Tính các mức S/R
+        r3 = pp + (max(highs) - min(lows))
+        r2 = pp + (max(highs) - min(lows)) * 0.618  # Fibonacci ratio
+        r1 = 2 * pp - min(lows)
+        
+        s1 = 2 * pp - max(highs)
+        s2 = pp - (max(highs) - min(lows)) * 0.618
+        s3 = pp - (max(highs) - min(lows))
+        
+        # Tính độ mạnh của mỗi mức
+        def calculate_strength(level):
+            touches = sum(1 for price in closes if abs(price - level) / level < 0.001)
+            return min(touches / lookback * 100, 100)  # Độ mạnh tối đa 100%
+        
+        levels = {
+            "R3": {"price": r3, "strength": calculate_strength(r3)},
+            "R2": {"price": r2, "strength": calculate_strength(r2)},
+            "R1": {"price": r1, "strength": calculate_strength(r1)},
+            "PP": {"price": pp, "strength": calculate_strength(pp)},
+            "S1": {"price": s1, "strength": calculate_strength(s1)},
+            "S2": {"price": s2, "strength": calculate_strength(s2)},
+            "S3": {"price": s3, "strength": calculate_strength(s3)}
+        }
+        
+        save_log(f"Đã tính toán mức S/R: {levels}", DEBUG_LOG_FILE)
+        return levels
+
+    except Exception as e:
+        save_log(f"Lỗi tính S/R: {str(e)}", DEBUG_LOG_FILE)
+        return {}
+def improve_pivot_detection(self, price: float, time: str) -> tuple[bool, str]:
+    """
+    Cải thiện logic xác định pivot bằng cách kết hợp với mức S/R
+    Returns:
+        (is_pivot, pivot_type)
+    """
+    try:
+        # Lấy mức S/R
+        support_resistance = self.get_pivot_support_resistance()
+        if not support_resistance:
+            return False, ""
+
+        # Kiểm tra xem giá có gần mức S/R nào không
+        MIN_DISTANCE = 0.001  # 0.1% cho phép dao động
+        
+        for level_name, level_data in support_resistance.items():
+            level_price = level_data["price"]
+            level_strength = level_data["strength"]
+            
+            price_diff = abs(price - level_price) / level_price
+            
+            if price_diff <= MIN_DISTANCE:
+                # Giá chạm mức S/R
+                if level_strength >= 70:  # Mức S/R mạnh
+                    if "R" in level_name:  # Mức kháng cự
+                        save_log(f"Phát hiện pivot tại mức kháng cự {level_name}: ${price:,.2f}", DEBUG_LOG_FILE)
+                        return True, "High"
+                    elif "S" in level_name:  # Mức hỗ trợ
+                        save_log(f"Phát hiện pivot tại mức hỗ trợ {level_name}: ${price:,.2f}", DEBUG_LOG_FILE)
+                        return True, "Low"
+        
+        return False, ""
+
+    except Exception as e:
+        save_log(f"Lỗi cải thiện pivot: {str(e)}", DEBUG_LOG_FILE)
+        return False, ""
+
+def analyze_market_trend(self, short_period: int = 10, medium_period: int = 20, long_period: int = 50) -> dict:
+    """
+    Phân tích xu hướng thị trường sử dụng nhiều chỉ báo
+    Returns:
+        Dict chứa kết quả phân tích
+    """
+    try:
+        if not hasattr(self, 'price_history') or len(self.price_history) < long_period:
+            save_log(f"Không đủ dữ liệu để phân tích (cần {long_period})", DEBUG_LOG_FILE)
+            return {}
+
+        prices = [x['price'] for x in self.price_history]
+        
+        # Tính MA các chu kỳ
+        def calculate_ma(period):
+            if len(prices) < period:
+                return None
+            return sum(prices[-period:]) / period
+        
+        short_ma = calculate_ma(short_period)
+        medium_ma = calculate_ma(medium_period)
+        long_ma = calculate_ma(long_period)
+        
+        # Tính RSI
+        def calculate_rsi(period=14):
+            if len(prices) < period + 1:
+                return None
+                
+            deltas = [prices[i+1] - prices[i] for i in range(len(prices)-1)]
+            gains = [d if d > 0 else 0 for d in deltas]
+            losses = [-d if d < 0 else 0 for d in deltas]
+            
+            avg_gain = sum(gains[-period:]) / period
+            avg_loss = sum(losses[-period:]) / period
+            
+            if avg_loss == 0:
+                return 100
+            
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+            return rsi
+            
+        rsi = calculate_rsi()
+        
+        # Xác định xu hướng
+        trend = "Unknown"
+        strength = 0
+        
+        if short_ma and medium_ma and long_ma:
+            if short_ma > medium_ma > long_ma:
+                trend = "Uptrend"
+                strength = min(((short_ma/long_ma - 1) * 100), 100)
+            elif short_ma < medium_ma < long_ma:
+                trend = "Downtrend"
+                strength = min(((1 - short_ma/long_ma) * 100), 100)
+            else:
+                trend = "Sideways"
+                strength = 0
+                
+        # Tính volatility
+        if len(prices) >= 20:
+            recent_prices = prices[-20:]
+            avg_price = sum(recent_prices) / len(recent_prices)
+            volatility = sum([abs(p - avg_price) / avg_price for p in recent_prices]) / len(recent_prices) * 100
+        else:
+            volatility = None
+
+        result = {
+            "trend": trend,
+            "strength": strength,
+            "short_ma": short_ma,
+            "medium_ma": medium_ma,
+            "long_ma": long_ma,
+            "rsi": rsi,
+            "volatility": volatility
+        }
+        
+        save_log(f"Kết quả phân tích xu hướng: {result}", DEBUG_LOG_FILE)
+        return result
+
+    except Exception as e:
+        save_log(f"Lỗi phân tích xu hướng: {str(e)}", DEBUG_LOG_FILE)
+        return {}
 def check_pattern():
     """ Checks if detected pivots match predefined patterns."""
     patterns = {
