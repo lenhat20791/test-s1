@@ -32,10 +32,6 @@ for file in [LOG_FILE, PATTERN_LOG_FILE, DEBUG_LOG_FILE]:
         with open(file, "w", encoding="utf-8") as f:
             f.write("=== Log Initialized ===\n")
 
-# Store pivot data
-detected_pivots = []  # Stores last 15 pivots
-user_provided_pivots = []  # Stores pivots provided via /moc command
-
 # Initialize Binance Client
 binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
@@ -43,7 +39,7 @@ class PivotData:
     def __init__(self):
         self.detected_pivots = []  # Lưu các pivot tự động phát hiện (tối đa 15)
         self.user_provided_pivots = []  # Lưu các pivot từ người dùng qua lệnh /moc
-        self.MIN_PRICE_CHANGE = 0.005  # 0.5% thay đổi giá tối thiểu
+        self.MIN_PRICE_CHANGE = 0.002  # 0.2% thay đổi giá tối thiểu
         self.MIN_PIVOT_DISTANCE = 3  # Khoảng cách tối thiểu giữa các pivot (số nến)
         self.TREND_WINDOW = 10  # Số nến để xác định xu hướng
         self.MAX_PIVOTS = 15  # Số lượng pivot tối đa lưu trữ
@@ -565,12 +561,20 @@ def save_to_excel():
         logger.error(error_msg)
     
 def get_binance_price(context: CallbackContext):
-    """ Fetches high and low prices for the last 5-minute candlestick """
     try:
         klines = binance_client.futures_klines(symbol="BTCUSDT", interval="5m", limit=2)
         last_candle = klines[-2]  # Ensure we get the closed candle
         high_price = float(last_candle[2])
         low_price = float(last_candle[3])
+        close_price = float(last_candle[4])
+        
+        # Thêm dữ liệu giá vào price_history
+        price_data = {
+            "high": high_price,
+            "low": low_price,
+            "price": close_price
+        }
+        pivot_data.add_price_data(price_data)
         
         save_log(f"Thu thập dữ liệu nến 5m: Cao nhất = {high_price}, Thấp nhất = {low_price}", DEBUG_LOG_FILE)
         
@@ -582,14 +586,16 @@ def get_binance_price(context: CallbackContext):
         save_log(f"Binance API Error: {e}", DEBUG_LOG_FILE)
         
 def schedule_next_run(job_queue):
-    """ Schedule the next run of get_binance_price exactly at the next 5-minute mark """
+    # lên lịch chạy khi chẵn 5p
     now = datetime.now()
     next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=(5 - now.minute % 5))
     delay = (next_run - now).total_seconds()
     
     save_log(f"Lên lịch chạy vào {next_run.strftime('%Y-%m-%d %H:%M:%S')}", DEBUG_LOG_FILE)
-    job_queue.run_once(get_binance_price, delay)
-    job_queue.run_repeating(get_binance_price, interval=300, first=delay)
+        job_queue.run_repeating(get_binance_price, interval=300, first=delay)
+    except Exception as e:
+        logger.error(f"Error scheduling next run: {e}")
+        save_log(f"Error scheduling next run: {e}", DEBUG_LOG_FILE)
 
 def detect_pivot(price, price_type):
     try:
@@ -617,33 +623,6 @@ def detect_pivot(price, price_type):
         error_msg = f"Lỗi trong quá trình phát hiện pivot: {str(e)}"
         save_log(error_msg, DEBUG_LOG_FILE)
         logger.error(error_msg)
-
-def _analyze_trend(pivots, window=10):
-    """Phân tích xu hướng dựa trên các pivot gần đây"""
-    if len(pivots) < window:
-        return 0
-    
-    recent_pivots = pivots[-window:]
-    prices = [p["price"] for p in recent_pivots]
-    price_changes = [prices[i] - prices[i-1] for i in range(1, len(prices))]
-    
-    # Tính toán xu hướng
-    up_moves = sum(1 for x in price_changes if x > 0)
-    down_moves = sum(1 for x in price_changes if x < 0)
-    
-    # Tính % thay đổi tổng thể
-    total_change = (prices[-1] - prices[0]) / prices[0] * 100
-    
-    # Kết hợp số lượng move và % thay đổi để xác định xu hướng
-    if up_moves > down_moves and total_change > 1:  # Tăng rõ ràng
-        return 2
-    elif up_moves > down_moves:  # Tăng nhẹ
-        return 1
-    elif down_moves > up_moves and total_change < -1:  # Giảm rõ ràng
-        return -2
-    elif down_moves > up_moves:  # Giảm nhẹ
-        return -1
-    return 0  # Đi ngang
 
 def _create_alert_message(pattern_name, current_price, recent_pivots):
     """Tạo thông báo chi tiết khi phát hiện mẫu hình"""
@@ -685,60 +664,76 @@ def send_alert(message):
 
 def moc(update: Update, context: CallbackContext):
     """ Handles the /moc command to receive multiple pivot points and resets logic."""
-    args = context.args
-    
-    logger.info(f"Received /moc command with args: {args}")
-    save_log(f"Received /moc command with args: {args}", DEBUG_LOG_FILE)
-    
-    if len(args) < 4 or (len(args) - 1) % 3 != 0:
-        update.message.reply_text("⚠️ Sai định dạng! Dùng: /moc btc lh 82000 14h20 hl 81000 14h30 hh 83000 14h50")
-        return
-    
-    asset = args[0].lower()
-    if asset != "btc":
-        update.message.reply_text("⚠️ Chỉ hỗ trợ BTC! Ví dụ: /moc btc lh 82000 14h20 hl 81000 14h30 hh 83000 14h50")
-        return
+    try:
+        args = context.args
         
-    # Xóa dữ liệu cũ
-    pivot_data.clear_all()
-    
-    # Ghi nhận các mốc mới
-    for i in range(1, len(args), 3):
-        try:
-            pivot_type = args[i]
-            price = float(args[i + 1])
-            time = args[i + 2]
-            pivot_data.add_user_pivot(pivot_type, price, time)
-        except ValueError:
-            update.message.reply_text(f"⚠️ Lỗi: Giá phải là số hợp lệ! ({args[i + 1]})")
+        logger.info(f"Received /moc command with args: {args}")
+        save_log(f"Received /moc command with args: {args}", DEBUG_LOG_FILE)
+        
+        if len(args) < 4 or (len(args) - 1) % 3 != 0:
+            update.message.reply_text("⚠️ Sai định dạng! Dùng: /moc btc lh 82000 13:20 hl 81000 13:30 hh 83000 13:50")
             return
-    
-    # Ghi đè dữ liệu vào pattern log
-    with open(PATTERN_LOG_FILE, "w", encoding="utf-8") as f:
-        f.write("=== Pattern Log Reset ===\n")
+        
+        asset = args[0].lower()
+        if asset != "btc":
+            update.message.reply_text("⚠️ Chỉ hỗ trợ BTC! Ví dụ: /moc btc lh 82000 13:20 hl 81000 13:30 hh 83000 13:50")
+            return
+            
+        # Xóa dữ liệu cũ
+        pivot_data.clear_all()
+        
+        # Ghi nhận các mốc mới
+        for i in range(1, len(args), 3):
+            pivot_type = args[i].upper()
+            price = float(args[i + 1])
+            # Chuyển đổi định dạng thời gian
+            time = args[i + 2].replace('h', ':')
+            
+            # Validate time format
+            try:
+                datetime.strptime(time, "%H:%M")
+            except ValueError:
+                update.message.reply_text(f"⚠️ Lỗi: Định dạng thời gian không đúng! Sử dụng HH:MM (ví dụ: 14:05)")
+                return
+                
+            pivot_data.add_user_pivot(pivot_type, price, time)
+        
+        # Ghi đè dữ liệu vào pattern log
+        with open(PATTERN_LOG_FILE, "w", encoding="utf-8") as f:
+            f.write("=== Pattern Log Reset ===\n")
 
-    save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", LOG_FILE)
-    save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", PATTERN_LOG_FILE)
-    save_to_excel()
+        save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", LOG_FILE)
+        save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", PATTERN_LOG_FILE)
+        save_to_excel()
 
-    # Phản hồi cho người dùng
-    update.message.reply_text(f"✅ Đã nhận các mốc: {pivot_data.user_provided_pivots}")
-    logger.info(f"User Pivots Updated: {pivot_data.user_provided_pivots}")
+        # Phản hồi cho người dùng
+        update.message.reply_text(f"✅ Đã nhận các mốc: {pivot_data.user_provided_pivots}")
+        logger.info(f"User Pivots Updated: {pivot_data.user_provided_pivots}")
+        
+    except Exception as e:
+        error_msg = f"Lỗi xử lý lệnh /moc: {str(e)}"
+        logger.error(error_msg)
+        save_log(error_msg, DEBUG_LOG_FILE)
+        update.message.reply_text(f"⚠️ Có lỗi xảy ra: {str(e)}")
 
 def main():
     """ Main entry point to start the bot."""
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-    job_queue = updater.job_queue
+    try:
+        updater = Updater(TOKEN, use_context=True)
+        dp = updater.dispatcher
+        job_queue = updater.job_queue
     
-    dp.add_handler(CommandHandler("moc", moc))
-    
-    schedule_next_run(job_queue)  # Schedule the first execution at the next 5-minute mark
-    
-    print("Bot is running...")
-    logger.info("Bot started successfully.")
-    updater.start_polling()
-    updater.idle()
+        dp.add_handler(CommandHandler("moc", moc))
+        
+        schedule_next_run(job_queue)  # Schedule the first execution at the next 5-minute mark
+        
+        print("Bot is running...")
+        logger.info("Bot started successfully.")
+        updater.start_polling()
+        updater.idle()
+    except Exception as e:
+        logger.error(f"Error in main: {e}")
+        save_log(f"Error in main: {e}", DEBUG_LOG_FILE)
 
 if __name__ == "__main__":
     main()
