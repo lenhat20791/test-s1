@@ -861,14 +861,22 @@ def moc(update: Update, context: CallbackContext):
                 curr_pivot = valid_pivots[i]
                 prev_pivot = valid_pivots[i-1]
                 
-                # Kiểm tra logic của chuỗi HH/HL/LH/LL
-                if curr_pivot['type'].startswith('H') and prev_pivot['type'].startswith('H'):
+                # Logic kiểm tra mới
+                if curr_pivot['type'] == "HH":
                     if curr_pivot['price'] <= prev_pivot['price']:
-                        update.message.reply_text(f"⚠️ Lỗi logic: {curr_pivot['type']} tại {curr_pivot['time']} phải có giá cao hơn pivot trước đó!")
+                        update.message.reply_text(f"⚠️ Lỗi logic: HH tại {curr_pivot['time']} phải có giá cao hơn pivot trước đó ({prev_pivot['type']} tại {prev_pivot['time']})!")
                         return
-                elif curr_pivot['type'].startswith('L') and prev_pivot['type'].startswith('L'):
+                elif curr_pivot['type'] == "LL":
                     if curr_pivot['price'] >= prev_pivot['price']:
-                        update.message.reply_text(f"⚠️ Lỗi logic: {curr_pivot['type']} tại {curr_pivot['time']} phải có giá thấp hơn pivot trước đó!")
+                        update.message.reply_text(f"⚠️ Lỗi logic: LL tại {curr_pivot['time']} phải có giá thấp hơn pivot trước đó ({prev_pivot['type']} tại {prev_pivot['time']})!")
+                        return
+                elif curr_pivot['type'] == "LH":
+                    if prev_pivot['type'].startswith('H') and curr_pivot['price'] >= prev_pivot['price']:
+                        update.message.reply_text(f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá thấp hơn pivot HH/HL trước đó!")
+                        return
+                elif curr_pivot['type'] == "HL":
+                    if prev_pivot['type'].startswith('L') and curr_pivot['price'] <= prev_pivot['price']:
+                        update.message.reply_text(f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá cao hơn pivot LL/LH trước đó!")
                         return
         
         # Ghi đè dữ liệu vào pattern log
