@@ -861,23 +861,54 @@ def moc(update: Update, context: CallbackContext):
                 curr_pivot = valid_pivots[i]
                 prev_pivot = valid_pivots[i-1]
                 
-                # Logic kiểm tra mới
-                if curr_pivot['type'] == "HH":
-                    if curr_pivot['price'] <= prev_pivot['price']:
-                        update.message.reply_text(f"⚠️ Lỗi logic: HH tại {curr_pivot['time']} phải có giá cao hơn pivot trước đó ({prev_pivot['type']} tại {prev_pivot['time']})!")
+                save_log(f"Kiểm tra logic: {curr_pivot['type']} (${curr_pivot['price']}) vs {prev_pivot['type']} (${prev_pivot['price']})", DEBUG_LOG_FILE)
+                
+                # Logic kiểm tra đã sửa
+                if curr_pivot['type'] == "LH":
+                    # LH phải cao hơn đáy trước đó (nếu là LL)
+                    if prev_pivot['type'] == "LL" and curr_pivot['price'] <= prev_pivot['price']:
+                        error_msg = f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá cao hơn LL trước đó!"
+                        save_log(error_msg, DEBUG_LOG_FILE)
+                        update.message.reply_text(error_msg)
                         return
-                elif curr_pivot['type'] == "LL":
-                    if curr_pivot['price'] >= prev_pivot['price']:
-                        update.message.reply_text(f"⚠️ Lỗi logic: LL tại {curr_pivot['time']} phải có giá thấp hơn pivot trước đó ({prev_pivot['type']} tại {prev_pivot['time']})!")
+                    # LH phải thấp hơn đỉnh trước đó (nếu là HH)
+                    if prev_pivot['type'] == "HH" and curr_pivot['price'] >= prev_pivot['price']:
+                        error_msg = f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá thấp hơn HH trước đó!"
+                        save_log(error_msg, DEBUG_LOG_FILE)
+                        update.message.reply_text(error_msg)
                         return
-                elif curr_pivot['type'] == "LH":
-                    if prev_pivot['type'].startswith('H') and curr_pivot['price'] >= prev_pivot['price']:
-                        update.message.reply_text(f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá thấp hơn pivot HH/HL trước đó!")
-                        return
+                        
                 elif curr_pivot['type'] == "HL":
-                    if prev_pivot['type'].startswith('L') and curr_pivot['price'] <= prev_pivot['price']:
-                        update.message.reply_text(f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá cao hơn pivot LL/LH trước đó!")
+                    # HL phải thấp hơn đỉnh trước đó (nếu là HH hoặc LH)
+                    if prev_pivot['type'] in ["HH", "LH"] and curr_pivot['price'] >= prev_pivot['price']:
+                        error_msg = f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá thấp hơn {prev_pivot['type']} trước đó!"
+                        save_log(error_msg, DEBUG_LOG_FILE)
+                        update.message.reply_text(error_msg)
                         return
+                    # HL phải cao hơn đáy trước đó (nếu là LL)
+                    if prev_pivot['type'] == "LL" and curr_pivot['price'] <= prev_pivot['price']:
+                        error_msg = f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá cao hơn LL trước đó!"
+                        save_log(error_msg, DEBUG_LOG_FILE)
+                        update.message.reply_text(error_msg)
+                        return
+                        
+                elif curr_pivot['type'] == "HH":
+                    # HH luôn phải cao hơn pivot trước đó
+                    if curr_pivot['price'] <= prev_pivot['price']:
+                        error_msg = f"⚠️ Lỗi logic: HH tại {curr_pivot['time']} phải có giá cao hơn pivot trước đó!"
+                        save_log(error_msg, DEBUG_LOG_FILE)
+                        update.message.reply_text(error_msg)
+                        return
+                        
+                elif curr_pivot['type'] == "LL":
+                    # LL luôn phải thấp hơn pivot trước đó
+                    if curr_pivot['price'] >= prev_pivot['price']:
+                        error_msg = f"⚠️ Lỗi logic: LL tại {curr_pivot['time']} phải có giá thấp hơn pivot trước đó!"
+                        save_log(error_msg, DEBUG_LOG_FILE)
+                        update.message.reply_text(error_msg)
+                        return
+                        
+                save_log(f"Pivot {curr_pivot['type']} hợp lệ", DEBUG_LOG_FILE)
         
         # Ghi đè dữ liệu vào pattern log
         with open(PATTERN_LOG_FILE, "w", encoding="utf-8") as f:
