@@ -37,15 +37,15 @@ binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
 class PivotData:
     def __init__(self):
-        self.detected_pivots = []  # Lưu các pivot tự động phát hiện (tối đa 15)
-        self.user_provided_pivots = []  # Lưu các pivot từ người dùng qua lệnh /moc
-        self.MIN_PRICE_CHANGE = 0.002  # 0.2% thay đổi giá tối thiểu
-        self.MIN_PIVOT_DISTANCE = 3  # Khoảng cách tối thiểu giữa các pivot (số nến)
-        self.TREND_WINDOW = 10  # Số nến để xác định xu hướng
-        self.MAX_PIVOTS = 15  # Số lượng pivot tối đa lưu trữ
+        self.detected_pivots = []  
+        self.user_provided_pivots = []  
+        self.MIN_PRICE_CHANGE = 0.004  # Tăng từ 0.002 lên 0.004 vì timeframe lớn hơn
+        self.MIN_PIVOT_DISTANCE = 2    # Giảm từ 3 xuống 2 vì khoảng thời gian giữa các nến dài hơn
+        self.TREND_WINDOW = 5          # Giảm từ 10 xuống 5 vì timeframe lớn hơn
+        self.MAX_PIVOTS = 15  
         self.last_sync_time = datetime.now()
-        self.CONFIRMATION_CANDLES = 3
-        self.pending_pivots = []  # List chứa các pivot đang chờ xác nhận
+        self.CONFIRMATION_CANDLES = 2   # Giảm từ 3 xuống 2 vì timeframe lớn hơn
+        self.pending_pivots = []
 
     def add_price_data(self, price_data: dict):
         """Thêm dữ liệu giá mới vào price_history"""
@@ -292,7 +292,7 @@ class PivotData:
         last_pivot = combined_pivots[-1]
         last_time = datetime.strptime(last_pivot["time"], "%H:%M")
         current_time = datetime.now()
-        time_diff = (current_time - last_time).total_seconds() / 300  # Đổi sang số nến 5m
+        time_diff = (current_time - last_time).total_seconds() / 1800  # Đổi sang số nến 30m
         
         if time_diff < self.MIN_PIVOT_DISTANCE:
             save_log(f"Pivot too close in time: {time_diff} candles", DEBUG_LOG_FILE)
@@ -635,13 +635,13 @@ def save_to_excel():
     
 def get_binance_price(context: CallbackContext):
     try:
-        klines = binance_client.futures_klines(symbol="BTCUSDT", interval="5m", limit=2)
+        # Thay đổi interval từ "5m" sang "30m"
+        klines = binance_client.futures_klines(symbol="BTCUSDT", interval="30m", limit=2)
         last_candle = klines[-2]  # Ensure we get the closed candle
         high_price = float(last_candle[2])
         low_price = float(last_candle[3])
         close_price = float(last_candle[4])
         
-        # Thêm dữ liệu giá vào price_history
         price_data = {
             "high": high_price,
             "low": low_price,
@@ -649,7 +649,7 @@ def get_binance_price(context: CallbackContext):
         }
         pivot_data.add_price_data(price_data)
         
-        save_log(f"Thu thập dữ liệu nến 5m: Cao nhất = {high_price}, Thấp nhất = {low_price}", DEBUG_LOG_FILE)
+        save_log(f"Thu thập dữ liệu nến 30m: Cao nhất = {high_price}, Thấp nhất = {low_price}", DEBUG_LOG_FILE)
         
         detect_pivot(high_price, "H")
         detect_pivot(low_price, "L")
@@ -660,13 +660,14 @@ def get_binance_price(context: CallbackContext):
         
 def schedule_next_run(job_queue):
     try:
-        # lên lịch chạy khi chẵn 5p
+        # lên lịch chạy khi chẵn 30p
         now = datetime.now()
-        next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=(5 - now.minute % 5))
+        next_run = now.replace(second=0, microsecond=0) + timedelta(minutes=(30 - now.minute % 30))
         delay = (next_run - now).total_seconds()
         
         save_log(f"Lên lịch chạy vào {next_run.strftime('%Y-%m-%d %H:%M:%S')}", DEBUG_LOG_FILE)
-        job_queue.run_repeating(get_binance_price, interval=300, first=delay)
+        # Thay đổi interval từ 300 (5 phút) sang 1800 (30 phút)
+        job_queue.run_repeating(get_binance_price, interval=1800, first=delay)
     except Exception as e:
         logger.error(f"Error scheduling next run: {e}")
         save_log(f"Error scheduling next run: {e}", DEBUG_LOG_FILE)
@@ -780,32 +781,95 @@ def moc(update: Update, context: CallbackContext):
         save_log(f"Received /moc command with args: {args}", DEBUG_LOG_FILE)
         
         if len(args) < 4 or (len(args) - 1) % 3 != 0:
-            update.message.reply_text("⚠️ Sai định dạng! Dùng: /moc btc lh 82000 13:20 hl 81000 13:30 hh 83000 13:50")
+            update.message.reply_text("⚠️ Sai định dạng! Dùng: /moc btc lh 82000 13:30 hl 81000 14:00 hh 83000 14:30")
             return
         
         asset = args[0].lower()
         if asset != "btc":
-            update.message.reply_text("⚠️ Chỉ hỗ trợ BTC! Ví dụ: /moc btc lh 82000 13:20 hl 81000 13:30 hh 83000 13:50")
+            update.message.reply_text("⚠️ Chỉ hỗ trợ BTC! Ví dụ: /moc btc lh 82000 13:30 hl 81000 14:00 hh 83000 14:30")
             return
             
         # Xóa dữ liệu cũ
         pivot_data.clear_all()
         
         # Ghi nhận các mốc mới
+        valid_pivots = []
+        adjusted_times = []
+        current_time = datetime.now()  # Lấy thời gian hiện tại
+        
+        # Kiểm tra thứ tự thời gian
+        time_points = []
+        for i in range(1, len(args), 3):
+            try:
+                time = args[i + 2].replace('h', ':')
+                time_obj = datetime.strptime(time, "%H:%M")
+                time_points.append(time_obj)
+            except ValueError:
+                continue
+
+        if time_points:
+            if time_points != sorted(time_points):
+                update.message.reply_text("⚠️ Các mốc thời gian phải được nhập theo thứ tự tăng dần!")
+                return
+        
         for i in range(1, len(args), 3):
             pivot_type = args[i].upper()
-            price = float(args[i + 1])
-            # Chuyển đổi định dạng thời gian
-            time = args[i + 2].replace('h', ':')
-            
-            # Validate time format
-            try:
-                datetime.strptime(time, "%H:%M")
-            except ValueError:
-                update.message.reply_text(f"⚠️ Lỗi: Định dạng thời gian không đúng! Sử dụng HH:MM (ví dụ: 14:05)")
+            if pivot_type not in ["HH", "HL", "LH", "LL"]:
+                update.message.reply_text(f"⚠️ Loại pivot không hợp lệ: {pivot_type}. Chỉ chấp nhận: HH, HL, LH, LL")
                 return
+
+            # Validate giá
+            try:
+                price = float(args[i + 1])
+                if price <= 0:
+                    update.message.reply_text(f"⚠️ Giá phải lớn hơn 0: {args[i + 1]}")
+                    return
+                if price > 500000:  # Giới hạn giá tối đa hợp lý cho BTC
+                    update.message.reply_text(f"⚠️ Giá vượt quá giới hạn cho phép: {args[i + 1]}")
+                    return
+            except ValueError:
+                update.message.reply_text(f"⚠️ Giá không hợp lệ: {args[i + 1]}")
+                return
+
+            # Validate và xử lý thời gian
+            time = args[i + 2].replace('h', ':')
+            try:
+                time_obj = datetime.strptime(time, "%H:%M")
                 
-            pivot_data.add_user_pivot(pivot_type, price, time)
+                # Làm tròn về mốc 30 phút gần nhất
+                minutes = time_obj.minute
+                if minutes % 30 != 0:
+                    adjusted_minutes = 30 * (minutes // 30)
+                    original_time = time
+                    time = time_obj.replace(minute=adjusted_minutes).strftime("%H:%M")
+                    adjusted_times.append((original_time, time))
+                    save_log(f"Đã điều chỉnh thời gian từ {original_time} thành {time} cho phù hợp với timeframe 30m", DEBUG_LOG_FILE)
+            except ValueError:
+                update.message.reply_text(f"⚠️ Lỗi: Định dạng thời gian không đúng! Sử dụng HH:MM (ví dụ: 14:00, 14:30)")
+                return
+
+            # Thêm pivot mới
+            if pivot_data.add_user_pivot(pivot_type, price, time):
+                valid_pivots.append({"type": pivot_type, "price": price, "time": time})
+            else:
+                update.message.reply_text(f"⚠️ Không thể thêm pivot: {pivot_type} at {time}")
+                return
+        
+        # Kiểm tra tính hợp lệ của chuỗi pivot
+        if len(valid_pivots) >= 2:
+            for i in range(1, len(valid_pivots)):
+                curr_pivot = valid_pivots[i]
+                prev_pivot = valid_pivots[i-1]
+                
+                # Kiểm tra logic của chuỗi HH/HL/LH/LL
+                if curr_pivot['type'].startswith('H') and prev_pivot['type'].startswith('H'):
+                    if curr_pivot['price'] <= prev_pivot['price']:
+                        update.message.reply_text(f"⚠️ Lỗi logic: {curr_pivot['type']} tại {curr_pivot['time']} phải có giá cao hơn pivot trước đó!")
+                        return
+                elif curr_pivot['type'].startswith('L') and prev_pivot['type'].startswith('L'):
+                    if curr_pivot['price'] >= prev_pivot['price']:
+                        update.message.reply_text(f"⚠️ Lỗi logic: {curr_pivot['type']} tại {curr_pivot['time']} phải có giá thấp hơn pivot trước đó!")
+                        return
         
         # Ghi đè dữ liệu vào pattern log
         with open(PATTERN_LOG_FILE, "w", encoding="utf-8") as f:
@@ -815,8 +879,18 @@ def moc(update: Update, context: CallbackContext):
         save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", PATTERN_LOG_FILE)
         save_to_excel()
 
-        # Phản hồi cho người dùng
-        update.message.reply_text(f"✅ Đã nhận các mốc: {pivot_data.user_provided_pivots}")
+        # Tạo phản hồi chi tiết cho người dùng
+        response = "✅ Đã nhận các mốc:\n"
+        for pivot in valid_pivots:
+            response += f"• {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})\n"
+        
+        # Thêm thông báo về các điều chỉnh thời gian (nếu có)
+        if adjusted_times:
+            response += "\nℹ️ Đã điều chỉnh các mốc thời gian sau cho phù hợp với timeframe 30m:\n"
+            for original, adjusted in adjusted_times:
+                response += f"• {original} → {adjusted}\n"
+            
+        update.message.reply_text(response)
         logger.info(f"User Pivots Updated: {pivot_data.user_provided_pivots}")
         
     except Exception as e:
