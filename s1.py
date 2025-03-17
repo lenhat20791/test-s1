@@ -32,7 +32,6 @@ for file in [LOG_FILE, PATTERN_LOG_FILE, DEBUG_LOG_FILE]:
         with open(file, "w", encoding="utf-8") as f:
             f.write("=== Log Initialized ===\n")
 
-
 # Store pivot data
 detected_pivots = []  # Stores last 15 pivots
 user_provided_pivots = []  # Stores pivots provided via /moc command
@@ -425,6 +424,21 @@ class PivotData:
                         return True, pattern_name
         return False, ""
         
+    def _calculate_trend(self, prices: list) -> int:
+        """Tính toán xu hướng dựa trên giá"""
+        if len(prices) < 2:
+            return 0
+            
+        changes = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+        up_moves = sum(1 for x in changes if x > 0)
+        down_moves = sum(1 for x in changes if x < 0)
+        
+        if up_moves > down_moves:
+            return 1
+        elif down_moves > up_moves:
+            return -1
+        return 0    
+        
 # Initialize PivotData instance
 pivot_data = PivotData()
 
@@ -578,17 +592,11 @@ def schedule_next_run(job_queue):
     job_queue.run_repeating(get_binance_price, interval=300, first=delay)
 
 def detect_pivot(price, price_type):
-    """ 
-    Xác định pivot points với các cải tiến:
-    - Phân tích xu hướng tổng thể
-    - Lọc nhiễu
-    - Xác định điểm pivot chính xác hơn
-    - Lưu trữ pivot data cấu trúc
-    """
     try:
         # Phân tích xu hướng
-        trend = _analyze_trend(pivot_data.get_all_pivots())
-        save_log(f"Xu hướng hiện tại: {'Tăng' if trend > 0 else 'Giảm' if trend < 0 else 'Đi ngang'}", DEBUG_LOG_FILE)
+        trend_analysis = pivot_data.analyze_market_trend()
+        trend = trend_analysis.get("trend", "Unknown")
+        save_log(f"Xu hướng hiện tại: {trend}", DEBUG_LOG_FILE)
 
         # Thêm pivot mới
         if pivot_data.add_detected_pivot(price, price_type):
@@ -601,7 +609,7 @@ def detect_pivot(price, price_type):
             has_pattern, pattern_name = pivot_data.check_pattern()
             if has_pattern:
                 # Tạo thông báo chi tiết
-                recent_pivots = pivot_data.get_recent_pivots(5)  # Lấy 5 pivot gần nhất
+                recent_pivots = pivot_data.get_recent_pivots(5)
                 message = _create_alert_message(pattern_name, price, recent_pivots)
                 send_alert(message)
                 
@@ -675,16 +683,8 @@ def send_alert(message):
     except Exception as e:
         save_log(f"Lỗi gửi cảnh báo: {str(e)}", DEBUG_LOG_FILE)
 
-
-
-
-    """ Sends an alert message to Telegram."""
-    bot = Bot(token=TOKEN)
-    bot.send_message(chat_id=CHAT_ID, text="⚠️ Pattern Detected! Check the market.")
-
 def moc(update: Update, context: CallbackContext):
     """ Handles the /moc command to receive multiple pivot points and resets logic."""
-    global user_provided_pivots, detected_pivots
     args = context.args
     
     logger.info(f"Received /moc command with args: {args}")
@@ -699,9 +699,8 @@ def moc(update: Update, context: CallbackContext):
         update.message.reply_text("⚠️ Chỉ hỗ trợ BTC! Ví dụ: /moc btc lh 82000 14h20 hl 81000 14h30 hh 83000 14h50")
         return
         
-    # **Xóa dữ liệu cũ** trước khi cập nhật mốc mới
-    user_provided_pivots.clear()
-    detected_pivots.clear()
+    # Xóa dữ liệu cũ
+    pivot_data.clear_all()
     
     # Ghi nhận các mốc mới
     for i in range(1, len(args), 3):
@@ -709,27 +708,22 @@ def moc(update: Update, context: CallbackContext):
             pivot_type = args[i]
             price = float(args[i + 1])
             time = args[i + 2]
-            user_provided_pivots.append({"type": pivot_type, "price": price, "time": time})
-            save_log(f"Nhận mốc {pivot_type} - Giá: {price} - Thời gian: {time}", DEBUG_LOG_FILE)
+            pivot_data.add_user_pivot(pivot_type, price, time)
         except ValueError:
             update.message.reply_text(f"⚠️ Lỗi: Giá phải là số hợp lệ! ({args[i + 1]})")
             return
     
-    # Giới hạn 15 mốc gần nhất
-    if len(user_provided_pivots) > 15:
-        user_provided_pivots = user_provided_pivots[-15:]
-
-    # **Ghi đè dữ liệu vào pattern log**
+    # Ghi đè dữ liệu vào pattern log
     with open(PATTERN_LOG_FILE, "w", encoding="utf-8") as f:
         f.write("=== Pattern Log Reset ===\n")
 
-    save_log(f"User Pivots Updated: {user_provided_pivots}", LOG_FILE)
-    save_log(f"User Pivots Updated: {user_provided_pivots}", PATTERN_LOG_FILE)
+    save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", LOG_FILE)
+    save_log(f"User Pivots Updated: {pivot_data.user_provided_pivots}", PATTERN_LOG_FILE)
     save_to_excel()
 
     # Phản hồi cho người dùng
-    update.message.reply_text(f"✅ Đã nhận các mốc: {user_provided_pivots}")
-    logger.info(f"User Pivots Updated: {user_provided_pivots}")
+    update.message.reply_text(f"✅ Đã nhận các mốc: {pivot_data.user_provided_pivots}")
+    logger.info(f"User Pivots Updated: {pivot_data.user_provided_pivots}")
 
 def main():
     """ Main entry point to start the bot."""
