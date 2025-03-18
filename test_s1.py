@@ -72,40 +72,73 @@ class S1HistoricalTester:
                 mask = (df['time'] == pivot['time'])
                 df.loc[mask, 'pending_status'] = f"Pending {pivot['type']} ({pivot['confirmation_candles']}/3)"
             
+            # Tạo DataFrame cho confirmed pivots và loại bỏ trùng lặp
+            confirmed_data = []
+            seen_pivots = set()  # Set để theo dõi các pivot đã thấy
+
+            for pivot in pivot_data.confirmed_pivots:
+                # Tạo tuple key để kiểm tra trùng lặp
+                pivot_key = (pivot['time'], pivot['type'], pivot['price'])
+                
+                # Chỉ thêm pivot nếu chưa tồn tại
+                if pivot_key not in seen_pivots:
+                    confirmed_data.append({
+                        'Time': pivot['time'],
+                        'Type': pivot['type'],
+                        'Price': pivot['price']
+                    })
+                    seen_pivots.add(pivot_key)
+
+            # Tạo DataFrame và sắp xếp theo thời gian
+            df_confirmed = pd.DataFrame(confirmed_data)
+            if not df_confirmed.empty:
+                # Chuyển đổi cột Time sang datetime để sắp xếp
+                df_confirmed['Time_sort'] = pd.to_datetime(df_confirmed['Time'], format='%H:%M')
+                df_confirmed = df_confirmed.sort_values('Time_sort')
+                df_confirmed = df_confirmed.drop('Time_sort', axis=1)  # Xóa cột phụ sau khi sắp xếp
+            
             # Lưu vào Excel với xlsxwriter
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
-                df.to_excel(writer, sheet_name='Test Data', index=False)
+                # Sheet chính 
+                df.to_excel(writer, sheet_name='TestData', index=False)
                 
-                # Tạo workbook và worksheet
+                # Sheet Confirmed Pivots
+                if not df_confirmed.empty:
+                    df_confirmed.to_excel(writer, sheet_name='ConfirmedPivots', index=False)
+                
+                # Lấy workbook và worksheet
                 workbook = writer.book
-                worksheet = writer.sheets['Test Data']
+                worksheet = writer.sheets['TestData']
                 
                 # Định dạng cho các cột
-                price_format = workbook.add_format({
-                    'num_format': '$#,##0.00'
-                })
+                price_format = workbook.add_format({'num_format': '$#,##0.00'})
                 pivot_format = workbook.add_format({
                     'bold': True,
-                    'font_color': 'red'  # Thay đổi 'color' thành 'font_color'
+                    'font_color': 'red'
                 })
                 pending_format = workbook.add_format({
-                    'font_color': 'blue',  # Thay đổi 'color' thành 'font_color'
+                    'font_color': 'blue',
                     'italic': True
                 })
                 
-                # Áp dụng định dạng
+                # Áp dụng định dạng cho TestData sheet
                 worksheet.set_column('C:E', 12, price_format)  # high, low, price columns
                 worksheet.set_column('F:F', 15, pivot_format)  # pivot_type column
                 worksheet.set_column('G:G', 20, pending_format)  # pending_status column
                 
+                # Định dạng cho ConfirmedPivots sheet nếu có
+                if not df_confirmed.empty:
+                    confirmed_worksheet = writer.sheets['ConfirmedPivots']
+                    confirmed_worksheet.set_column('C:C', 12, price_format)  # Price column
+                
                 # Tạo biểu đồ
                 chart = workbook.add_chart({'type': 'line'})
                 
-                # Thêm series price
+                # Thêm series với tên sheet đã được quote
                 chart.add_series({
                     'name': 'Price',
-                    'categories': f'=Test Data!$B$2:$B${len(df) + 1}',
-                    'values': f'=Test Data!$E$2:$E${len(df) + 1}',
+                    'categories': f"='TestData'!$B$2:$B${len(df) + 1}",
+                    'values': f"='TestData'!$E$2:$E${len(df) + 1}"
                 })
                 
                 # Định dạng biểu đồ
@@ -116,6 +149,16 @@ class S1HistoricalTester:
                 # Chèn biểu đồ vào worksheet
                 worksheet.insert_chart('I2', chart)
                 
+                # Thêm thống kê
+                stats_row = len(df) + 5
+                worksheet.write(stats_row, 0, "Thống kê:")
+                worksheet.write(stats_row + 1, 0, "Tổng số pivot:")
+                worksheet.write(stats_row + 1, 1, len(pivot_data.get_all_pivots()))
+                worksheet.write(stats_row + 2, 0, "Pivot đã xác nhận:")
+                worksheet.write(stats_row + 2, 1, len(pivot_data.confirmed_pivots))
+                worksheet.write(stats_row + 3, 0, "Pivot đang chờ xác nhận:")
+                worksheet.write(stats_row + 3, 1, len(pivot_data.pending_pivots))
+
             self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx")
             return True
             
