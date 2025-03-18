@@ -159,7 +159,7 @@ class S1HistoricalTester:
         """Chạy historical test cho S1"""
         try:
             # Set thời gian test từ 00:00 17/03 đến hiện tại
-            current_time = datetime(2025, 3, 18, 3, 13, 26)    # Current time from input
+            current_time = datetime(2025, 3, 18, 3, 27, 58)    # Current time from input
             start_time = datetime(2025, 3, 17, 0, 0, 0)       # Start from 00:00 17/03
             
             self.log_message(f"\n=== Bắt đầu test S1 ===")
@@ -220,7 +220,6 @@ class S1HistoricalTester:
             important_times = ['06:00', '11:00']
             
             for index, row in df.iterrows():
-                # Cập nhật price history
                 price_data = {
                     'time': row['time'],
                     'price': row['price'],
@@ -230,13 +229,19 @@ class S1HistoricalTester:
                 
                 # Log số pending pivots hiện tại
                 self.log_message(f"\nSố pending pivots: {len(pivot_data.pending_pivots)}")
+                
+                # Log chi tiết pending pivots
                 if pivot_data.pending_pivots:
                     self.log_message("Chi tiết pending pivots:")
                     for p in pivot_data.pending_pivots:
                         self.log_message(f"- Type: {p['type']}, Price: ${p['price']:,.2f}, Confirmations: {p['confirmation_candles']}/3")
                         if p['type'] in ["H", "HH", "LH"]:
+                            self.log_message(f"  Giá cao nhất: ${p['highest_price']:,.2f}")
+                            self.log_message(f"  Thời gian cao nhất: {p['highest_time']}")
                             self.log_message(f"  Số nến thấp hơn: {p['lower_prices']}")
                         else:
+                            self.log_message(f"  Giá thấp nhất: ${p['lowest_price']:,.2f}")
+                            self.log_message(f"  Thời gian thấp nhất: {p['lowest_time']}")
                             self.log_message(f"  Số nến cao hơn: {p['higher_prices']}")
                 
                 # Phân tích chi tiết tại các thời điểm quan trọng
@@ -247,15 +252,18 @@ class S1HistoricalTester:
                 pivot_data.add_price_data(price_data)
                 
                 # Log kết quả kiểm tra high/low
-                self.log_message(f"Checking High: ${row['high']:,.2f} -> Result: {pivot_data.detect_pivot(row['high'], 'H')}")
-                self.log_message(f"Checking Low: ${row['low']:,.2f} -> Result: {pivot_data.detect_pivot(row['low'], 'L')}")
+                high_pivot = pivot_data.detect_pivot(row['high'], 'H')
+                low_pivot = pivot_data.detect_pivot(row['low'], 'L')
+                self.log_message(f"Checking High: ${row['high']:,.2f} -> Result: {high_pivot}")
+                self.log_message(f"Checking Low: ${row['low']:,.2f} -> Result: {low_pivot}")
                 
                 # Log điều kiện thêm pivot
                 all_pivots = pivot_data.get_all_pivots()
                 if all_pivots:
                     last_pivot = all_pivots[-1]
-                    time_diff = (datetime.strptime(row['time'], "%H:%M") - 
-                               datetime.strptime(last_pivot["time"], "%H:%M")).total_seconds() / 1800
+                    last_time = datetime.strptime(last_pivot["time"], "%H:%M")
+                    current_time = datetime.strptime(row['time'], "%H:%M")
+                    time_diff = (current_time - last_time).total_seconds() / 1800
                     price_change = abs(row['price'] - last_pivot["price"]) / last_pivot["price"]
                     
                     self.log_message("\nKiểm tra điều kiện thêm pivot:")
@@ -263,8 +271,8 @@ class S1HistoricalTester:
                     self.log_message(f"Biên độ giá: {price_change:.2%}")
                     self.log_message(f"So với pivot trước ({last_pivot['type']} at {last_pivot['time']})")
                 
-                # Thu thập kết quả các pivot đã xác nhận
-                all_pivots = pivot_data.get_all_pivots()  # Lấy tất cả pivot (confirmed + user)
+                # Cập nhật results với các pivot đã xác nhận
+                all_pivots = pivot_data.get_all_pivots()
                 for pivot in all_pivots:
                     if pivot not in results:
                         results.append(pivot)
@@ -275,6 +283,7 @@ class S1HistoricalTester:
             self.log_message(f"Tổng số pivot đã xác nhận: {len(results)}")
             self.log_message(f"Số pivot đang chờ xác nhận: {len(pivot_data.pending_pivots)}")
             
+            # Log danh sách pivot đã xác nhận
             if results:
                 self.log_message("\nDanh sách pivot đã xác nhận:")
                 for pivot in results:
@@ -282,6 +291,7 @@ class S1HistoricalTester:
                     self.log_message(f"Loại: {pivot['type']}")
                     self.log_message(f"Giá: ${pivot['price']:,.2f}")
             
+            # Log danh sách pivot đang chờ xác nhận
             if pivot_data.pending_pivots:
                 self.log_message("\nDanh sách pivot đang chờ xác nhận:")
                 for pivot in pivot_data.pending_pivots:
@@ -290,8 +300,12 @@ class S1HistoricalTester:
                     self.log_message(f"Giá ban đầu: ${pivot['price']:,.2f}")
                     self.log_message(f"Xác nhận: {pivot['confirmation_candles']}/3")
                     if pivot['type'] in ["H", "HH", "LH"]:
+                        self.log_message(f"Giá cao nhất: ${pivot['highest_price']:,.2f}")
+                        self.log_message(f"Thời gian cao nhất: {pivot['highest_time']}")
                         self.log_message(f"Số nến thấp hơn: {pivot['lower_prices']}")
                     else:
+                        self.log_message(f"Giá thấp nhất: ${pivot['lowest_price']:,.2f}")
+                        self.log_message(f"Thời gian thấp nhất: {pivot['lowest_time']}")
                         self.log_message(f"Số nến cao hơn: {pivot['higher_prices']}")
             
             # Lưu kết quả vào Excel
