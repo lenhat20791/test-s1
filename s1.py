@@ -2,7 +2,7 @@ import logging
 import json
 import os
 import time
-from datetime import datetime,
+from datetime import datetime
 from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext, JobQueue
 from binance.client import Client
@@ -312,7 +312,7 @@ class PivotData:
         except Exception as e:
             save_log(f"Error adding detected pivot: {str(e)}", DEBUG_LOG_FILE)
             return False
-
+    
     def _can_add_pivot(self, price):
         """Kiểm tra có thể thêm pivot không"""
         try:
@@ -516,7 +516,7 @@ class PivotData:
             return False
 
     def validate_pending_pivots(self, current_price, current_time):
-         """Xác nhận các pivot đang chờ"""
+        """Xác nhận các pivot đang chờ"""
         try:
             confirmed_pivots = []
             remaining_pivots = []
