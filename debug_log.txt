@@ -1,0 +1,458 @@
+2025-03-17 15:19:21 [INFO] - Lên lịch chạy vào 2025-03-17 15:20:00
+2025-03-17 15:19:27 [INFO] - Received /moc command with args: ['btc', 'll', '82617', '13:30', 'lh', '83442', '14:05', 'lh', '83602', '14:45']
+2025-03-17 15:19:27 [INFO] - All pivot points cleared
+2025-03-17 15:19:27 [INFO] - User pivot added: ll at 13:30 price: $82617.0
+2025-03-17 15:19:27 [INFO] - User pivot added: lh at 14:05 price: $83442.0
+2025-03-17 15:19:27 [INFO] - User pivot added: lh at 14:45 price: $83602.0
+2025-03-17 15:19:27 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 15:20:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83438.0, 'low': 83284.0, 'price': 83357.3}
+2025-03-17 15:20:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83438.0, Thấp nhất = 83284.0
+2025-03-17 15:20:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:20:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:20:00 [INFO] - Price change too small: 0.20%
+2025-03-17 15:20:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:20:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:20:00 [INFO] - Price change too small: 0.38%
+2025-03-17 15:20:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 15:20:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83438.0, 'low': 83284.0, 'price': 83357.3}
+2025-03-17 15:20:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83438.0, Thấp nhất = 83284.0
+2025-03-17 15:20:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:20:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:20:00 [INFO] - Price change too small: 0.20%
+2025-03-17 15:20:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:20:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:20:00 [INFO] - Price change too small: 0.38%
+2025-03-17 15:20:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 15:25:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83357.4, 'low': 83171.7, 'price': 83232.0}
+2025-03-17 15:25:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83357.4, Thấp nhất = 83171.7
+2025-03-17 15:25:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:25:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:25:00 [INFO] - Price change too small: 0.29%
+2025-03-17 15:25:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:25:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:25:00 [INFO] - Detected pivot: LL at 15:25 price: $83171.7
+2025-03-17 15:25:00 [INFO] - Đã thêm pivot mới: L - Giá: $83,171.70
+2025-03-17 15:25:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:25:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:36:34 [INFO] - Lên lịch chạy vào 2025-03-17 15:40:00
+2025-03-17 15:36:35 [INFO] - Received /moc command with args: ['btc', 'll', '82617', '13:30', 'lh', '83442', '14:05', 'lh', '83602', '14:45']
+2025-03-17 15:36:35 [INFO] - All pivot points cleared
+2025-03-17 15:36:35 [INFO] - User pivot added: LL at 13:30 price: $82617.0
+2025-03-17 15:36:35 [INFO] - User pivot added: LH at 14:05 price: $83442.0
+2025-03-17 15:36:35 [INFO] - User pivot added: LH at 14:45 price: $83602.0
+2025-03-17 15:36:35 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 15:40:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83528.0, 'low': 83414.6, 'price': 83445.1}
+2025-03-17 15:40:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83528.0, Thấp nhất = 83414.6
+2025-03-17 15:40:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:40:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:40:00 [INFO] - Price change too small: 0.09%
+2025-03-17 15:40:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:40:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:40:00 [INFO] - Detected pivot: LL at 15:40 price: $83414.6
+2025-03-17 15:40:00 [INFO] - Đã thêm pivot mới: L - Giá: $83,414.60
+2025-03-17 15:40:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:40:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:45:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83469.9, 'low': 83386.4, 'price': 83460.1}
+2025-03-17 15:45:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83469.9, Thấp nhất = 83386.4
+2025-03-17 15:45:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:45:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:45:00 [INFO] - Price change too small: 0.07%
+2025-03-17 15:45:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:45:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:45:00 [INFO] - Price change too small: 0.03%
+2025-03-17 15:45:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:45:04 [INFO] - Received /moc command with args: ['btc', 'lh', '83442', '14:05', 'lh', '83602', '14:45', 'hl', '83168', '15:15']
+2025-03-17 15:45:04 [INFO] - All pivot points cleared
+2025-03-17 15:45:04 [INFO] - User pivot added: LH at 14:05 price: $83442.0
+2025-03-17 15:45:04 [INFO] - User pivot added: LH at 14:45 price: $83602.0
+2025-03-17 15:45:04 [INFO] - User pivot added: HL at 15:15 price: $83168.0
+2025-03-17 15:45:04 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 15:50:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83520.0, 'low': 83428.3, 'price': 83510.0}
+2025-03-17 15:50:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83520.0, Thấp nhất = 83428.3
+2025-03-17 15:50:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:50:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:50:00 [INFO] - Detected pivot: HH at 15:50 price: $83520.0
+2025-03-17 15:50:00 [INFO] - Đã thêm pivot mới: H - Giá: $83,520.00
+2025-03-17 15:50:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:50:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:50:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:50:00 [INFO] - Price change too small: 0.11%
+2025-03-17 15:50:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 15:55:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83692.2, 'low': 83472.8, 'price': 83533.6}
+2025-03-17 15:55:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83692.2, Thấp nhất = 83472.8
+2025-03-17 15:55:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:55:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:55:00 [INFO] - Detected pivot: HH at 15:55 price: $83692.2
+2025-03-17 15:55:00 [INFO] - Đã thêm pivot mới: H - Giá: $83,692.20
+2025-03-17 15:55:00 [INFO] - Error saving Excel file: [Errno 13] Permission denied: 'pivots.xlsx'
+2025-03-17 15:55:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 15:55:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 15:55:00 [INFO] - Detected pivot: HL at 15:55 price: $83472.8
+2025-03-17 15:55:00 [INFO] - Đã thêm pivot mới: L - Giá: $83,472.80
+2025-03-17 15:55:00 [INFO] - Error saving Excel file: [Errno 13] Permission denied: 'pivots.xlsx'
+2025-03-17 15:55:00 [INFO] - Error saving Excel file: [Errno 13] Permission denied: 'pivots.xlsx'
+2025-03-17 16:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83556.0, 'low': 83443.9, 'price': 83540.0}
+2025-03-17 16:00:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83556.0, Thấp nhất = 83443.9
+2025-03-17 16:00:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 16:00:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 16:00:00 [INFO] - Price change too small: 0.10%
+2025-03-17 16:00:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 16:00:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 16:00:00 [INFO] - Price change too small: 0.03%
+2025-03-17 16:00:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-17 16:05:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83588.4, 'low': 83494.9, 'price': 83500.1}
+2025-03-17 16:05:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83588.4, Thấp nhất = 83494.9
+2025-03-17 16:05:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 16:05:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 16:05:00 [INFO] - Price change too small: 0.14%
+2025-03-17 16:05:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 16:05:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 16:05:00 [INFO] - Price change too small: 0.03%
+2025-03-17 16:05:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-17 16:10:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83591.2, 'low': 83445.8, 'price': 83445.8}
+2025-03-17 16:10:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83591.2, Thấp nhất = 83445.8
+2025-03-17 16:10:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 16:10:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 16:10:00 [INFO] - Price change too small: 0.14%
+2025-03-17 16:10:00 [INFO] - Không đủ dữ liệu để phân tích (cần 50)
+2025-03-17 16:10:00 [INFO] - Xu hướng hiện tại: Unknown
+2025-03-17 16:10:00 [INFO] - Price change too small: 0.03%
+2025-03-17 16:10:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-17 16:33:12 [INFO] - Lên lịch chạy vào 2025-03-17 16:35:00
+2025-03-17 16:33:59 [INFO] - Received /moc command with args: ['btc', 'lh', '83602', '14:45', 'hl', '83168', '15:15', 'hh', '83694', '15:45']
+2025-03-17 16:33:59 [INFO] - All pivot points cleared
+2025-03-17 16:33:59 [INFO] - User pivot added: LH at 14:45 price: $83602.0
+2025-03-17 16:33:59 [INFO] - User pivot added: HL at 15:15 price: $83168.0
+2025-03-17 16:33:59 [INFO] - User pivot added: HH at 15:45 price: $83694.0
+2025-03-17 16:33:59 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 16:35:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83749.9, 'low': 83635.5, 'price': 83717.9}
+2025-03-17 16:35:00 [INFO] - Thu thập dữ liệu nến 5m: Cao nhất = 83749.9, Thấp nhất = 83635.5
+2025-03-17 16:35:00 [INFO] - Price change too small: 0.07%
+2025-03-17 16:35:00 [INFO] - Price change too small: 0.07%
+2025-03-17 16:35:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 16:43:51 [INFO] - Lên lịch chạy vào 2025-03-17 17:00:00
+2025-03-17 16:45:04 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 16:45:04 [INFO] - All pivot points cleared
+2025-03-17 16:45:04 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 16:45:04 [INFO] - User pivot added: LH at 11:00 price: $83849.0
+2025-03-17 16:45:04 [INFO] - User pivot added: HL at 13:30 price: $82651.0
+2025-03-17 16:45:04 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 16:59:45 [INFO] - Lên lịch chạy vào 2025-03-17 17:00:00
+2025-03-17 16:59:51 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 16:59:51 [INFO] - All pivot points cleared
+2025-03-17 16:59:51 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83749.9, 'low': 83393.4, 'price': 83717.9}
+2025-03-17 17:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83749.9, Thấp nhất = 83393.4
+2025-03-17 17:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,749.90
+2025-03-17 17:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,749.90 vào lúc 17:00
+2025-03-17 17:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,393.40
+2025-03-17 17:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,393.40 vào lúc 17:00
+2025-03-17 17:00:00 [INFO] - Pivot data saved to Excel with 1 points
+2025-03-17 17:01:42 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:01:44 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:01:50 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 17:01:50 [INFO] - All pivot points cleared
+2025-03-17 17:01:50 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:02:06 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:02:10 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 17:02:10 [INFO] - All pivot points cleared
+2025-03-17 17:02:10 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:07:35 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:07:46 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 17:07:46 [INFO] - All pivot points cleared
+2025-03-17 17:07:46 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:07:46 [INFO] - User pivot added: LH at 11:00 price: $83849.0
+2025-03-17 17:07:46 [INFO] - User pivot added: HL at 13:30 price: $82651.0
+2025-03-17 17:11:32 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:11:40 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 17:11:40 [INFO] - All pivot points cleared
+2025-03-17 17:11:40 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:11:40 [INFO] - User pivot added: LH at 11:00 price: $83849.0
+2025-03-17 17:11:40 [INFO] - User pivot added: HL at 13:30 price: $82651.0
+2025-03-17 17:11:48 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:11:59 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 17:11:59 [INFO] - All pivot points cleared
+2025-03-17 17:11:59 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:11:59 [INFO] - User pivot added: LH at 11:00 price: $83849.0
+2025-03-17 17:11:59 [INFO] - User pivot added: HL at 13:30 price: $82651.0
+2025-03-17 17:17:17 [INFO] - Lên lịch chạy vào 2025-03-17 17:30:00
+2025-03-17 17:17:25 [INFO] - Received /moc command with args: ['btc', 'll', '81938', '06:00', 'lh', '83849', '11:00', 'hl', '82651', '13:30']
+2025-03-17 17:17:25 [INFO] - All pivot points cleared
+2025-03-17 17:17:25 [INFO] - User pivot added: LL at 06:00 price: $81938.0
+2025-03-17 17:17:25 [INFO] - User pivot added: LH at 11:00 price: $83849.0
+2025-03-17 17:17:25 [INFO] - User pivot added: HL at 13:30 price: $82651.0
+2025-03-17 17:17:25 [INFO] - Kiểm tra logic: LH ($83849.0) vs LL ($81938.0)
+2025-03-17 17:17:25 [INFO] - Pivot LH hợp lệ
+2025-03-17 17:17:25 [INFO] - Kiểm tra logic: HL ($82651.0) vs LH ($83849.0)
+2025-03-17 17:17:25 [INFO] - Pivot HL hợp lệ
+2025-03-17 17:17:25 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 17:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83737.0, 'low': 83503.5, 'price': 83620.0}
+2025-03-17 17:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83737.0, Thấp nhất = 83503.5
+2025-03-17 17:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,737.00
+2025-03-17 17:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,737.00 vào lúc 17:30
+2025-03-17 17:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,503.50
+2025-03-17 17:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,503.50 vào lúc 17:30
+2025-03-17 17:30:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 18:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83650.0, 'low': 83304.2, 'price': 83433.7}
+2025-03-17 18:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83650.0, Thấp nhất = 83304.2
+2025-03-17 18:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,650.00
+2025-03-17 18:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,650.00 vào lúc 18:00
+2025-03-17 18:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,304.20
+2025-03-17 18:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,304.20 vào lúc 18:00
+2025-03-17 18:00:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 18:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83449.9, 'low': 83213.9, 'price': 83299.7}
+2025-03-17 18:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83449.9, Thấp nhất = 83213.9
+2025-03-17 18:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,449.90
+2025-03-17 18:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,449.90 vào lúc 18:30
+2025-03-17 18:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,213.90
+2025-03-17 18:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,213.90 vào lúc 18:30
+2025-03-17 18:30:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 19:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83608.4, 'low': 83172.1, 'price': 83505.4}
+2025-03-17 19:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83608.4, Thấp nhất = 83172.1
+2025-03-17 19:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,608.40
+2025-03-17 19:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,608.40 vào lúc 19:00
+2025-03-17 19:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,172.10
+2025-03-17 19:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,172.10 vào lúc 19:00
+2025-03-17 19:00:00 [INFO] - Pivot data saved to Excel with 3 points
+2025-03-17 19:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83666.0, 'low': 83450.3, 'price': 83475.0}
+2025-03-17 19:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83666.0, Thấp nhất = 83450.3
+2025-03-17 19:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,666.00
+2025-03-17 19:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,666.00 vào lúc 19:30
+2025-03-17 19:30:00 [INFO] - Xác nhận đáy tại $83,172.10 (2/2 nến cao hơn)
+2025-03-17 19:30:00 [INFO] - Detected pivot: HL at 19:30 price: $83172.1
+2025-03-17 19:30:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,172.10
+2025-03-17 19:30:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 19:30:00 [INFO] - So sánh biên độ: Hiện tại 0.33% vs Cũ 0.63%
+2025-03-17 19:30:00 [INFO] - Bỏ qua pivot tại 19:30 do đã có pivot mạnh hơn (giá: $83,450.30)
+2025-03-17 19:30:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 20:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84000.0, 'low': 82947.4, 'price': 83155.4}
+2025-03-17 20:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84000.0, Thấp nhất = 82947.4
+2025-03-17 20:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $84,000.00
+2025-03-17 20:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $84,000.00 vào lúc 20:00
+2025-03-17 20:00:00 [INFO] - Price change too small: 0.27%
+2025-03-17 20:00:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 20:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84000.0, 'low': 82948.1, 'price': 83009.1}
+2025-03-17 20:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84000.0, Thấp nhất = 82948.1
+2025-03-17 20:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $84,000.00
+2025-03-17 20:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $84,000.00 vào lúc 20:30
+2025-03-17 20:30:00 [INFO] - Price change too small: 0.27%
+2025-03-17 20:30:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 21:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83237.3, 'low': 82801.0, 'price': 82904.3}
+2025-03-17 21:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83237.3, Thấp nhất = 82801.0
+2025-03-17 21:00:00 [INFO] - Price change too small: 0.08%
+2025-03-17 21:00:00 [INFO] - Thêm pivot chờ xác nhận: LL tại $82,801.00
+2025-03-17 21:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: LL - Giá: $82,801.00 vào lúc 21:00
+2025-03-17 21:00:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 21:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83704.8, 'low': 82757.1, 'price': 82971.4}
+2025-03-17 21:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83704.8, Thấp nhất = 82757.1
+2025-03-17 21:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,704.80
+2025-03-17 21:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,704.80 vào lúc 21:30
+2025-03-17 21:30:00 [INFO] - Thêm pivot chờ xác nhận: LL tại $82,757.10
+2025-03-17 21:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: LL - Giá: $82,757.10 vào lúc 21:30
+2025-03-17 21:30:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 22:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 82975.1, 'low': 82384.0, 'price': 82727.8}
+2025-03-17 22:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 82975.1, Thấp nhất = 82384.0
+2025-03-17 22:00:00 [INFO] - Price change too small: 0.24%
+2025-03-17 22:00:00 [INFO] - Thêm pivot chờ xác nhận: LL tại $82,384.00
+2025-03-17 22:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: LL - Giá: $82,384.00 vào lúc 22:00
+2025-03-17 22:00:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-17 22:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83336.9, 'low': 82655.1, 'price': 82873.1}
+2025-03-17 22:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83336.9, Thấp nhất = 82655.1
+2025-03-17 22:30:00 [INFO] - Price change too small: 0.20%
+2025-03-17 22:30:00 [INFO] - Xác nhận đáy tại $82,384.00 (2/2 nến cao hơn)
+2025-03-17 22:30:00 [INFO] - Detected pivot: LL at 22:30 price: $82384.0
+2025-03-17 22:30:00 [INFO] - Pivot đã được xác nhận và thêm vào: LL - $82,384.00
+2025-03-17 22:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-17 22:30:00 [INFO] - So sánh biên độ: Hiện tại 0.33% vs Cũ 0.96%
+2025-03-17 22:30:00 [INFO] - Bỏ qua pivot tại 22:30 do đã có pivot mạnh hơn (giá: $82,655.10)
+2025-03-17 22:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-17 23:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83562.0, 'low': 82663.8, 'price': 83306.6}
+2025-03-17 23:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83562.0, Thấp nhất = 82663.8
+2025-03-17 23:00:00 [INFO] - Thêm pivot chờ xác nhận: LH tại $83,562.00
+2025-03-17 23:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: LH - Giá: $83,562.00 vào lúc 23:00
+2025-03-17 23:00:00 [INFO] - Price change too small: 0.34%
+2025-03-17 23:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-17 23:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83675.0, 'low': 83110.5, 'price': 83499.0}
+2025-03-17 23:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83675.0, Thấp nhất = 83110.5
+2025-03-17 23:30:00 [INFO] - Thêm pivot chờ xác nhận: LH tại $83,675.00
+2025-03-17 23:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: LH - Giá: $83,675.00 vào lúc 23:30
+2025-03-17 23:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,110.50
+2025-03-17 23:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,110.50 vào lúc 23:30
+2025-03-17 23:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 00:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83850.0, 'low': 83400.0, 'price': 83593.8}
+2025-03-18 00:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83850.0, Thấp nhất = 83400.0
+2025-03-18 00:00:00 [INFO] - Xác nhận đáy tại $83,110.50 (2/2 nến cao hơn)
+2025-03-18 00:00:00 [INFO] - Detected pivot: HL at 00:00 price: $83110.5
+2025-03-18 00:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,110.50
+2025-03-18 00:00:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 00:00:00 [INFO] - So sánh biên độ: Hiện tại 1.22% vs Cũ 0.07%
+2025-03-18 00:00:00 [INFO] - Xóa pivot cũ HL ($83,110.50) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 00:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83110.5, 'time': '00:00', 'source': 'system'}
+2025-03-18 00:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,400.00
+2025-03-18 00:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,400.00 vào lúc 00:00
+2025-03-18 00:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 00:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83715.5, 'low': 83054.9, 'price': 83408.0}
+2025-03-18 00:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83715.5, Thấp nhất = 83054.9
+2025-03-18 00:30:00 [INFO] - Thêm pivot chờ xác nhận: LH tại $83,715.50
+2025-03-18 00:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: LH - Giá: $83,715.50 vào lúc 00:30
+2025-03-18 00:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,054.90
+2025-03-18 00:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,054.90 vào lúc 00:30
+2025-03-18 00:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 01:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83971.6, 'low': 83319.8, 'price': 83892.2}
+2025-03-18 01:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83971.6, Thấp nhất = 83319.8
+2025-03-18 01:00:00 [INFO] - Xác nhận đáy tại $83,054.90 (2/2 nến cao hơn)
+2025-03-18 01:00:00 [INFO] - Detected pivot: HL at 01:00 price: $83054.9
+2025-03-18 01:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,054.90
+2025-03-18 01:00:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 01:00:00 [INFO] - So sánh biên độ: Hiện tại 1.12% vs Cũ 0.14%
+2025-03-18 01:00:00 [INFO] - Xóa pivot cũ HL ($83,054.90) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 01:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83054.9, 'time': '01:00', 'source': 'system'}
+2025-03-18 01:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,319.80
+2025-03-18 01:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,319.80 vào lúc 01:00
+2025-03-18 01:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 01:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84403.9, 'low': 83785.9, 'price': 84164.5}
+2025-03-18 01:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84403.9, Thấp nhất = 83785.9
+2025-03-18 01:30:00 [INFO] - Xác nhận đáy tại $83,319.80 (2/2 nến cao hơn)
+2025-03-18 01:30:00 [INFO] - Detected pivot: HL at 01:30 price: $83319.8
+2025-03-18 01:30:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,319.80
+2025-03-18 01:30:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 01:30:00 [INFO] - So sánh biên độ: Hiện tại 1.67% vs Cũ 0.18%
+2025-03-18 01:30:00 [INFO] - Xóa pivot cũ HL ($83,319.80) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 01:30:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83319.8, 'time': '01:30', 'source': 'system'}
+2025-03-18 01:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,785.90
+2025-03-18 01:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,785.90 vào lúc 01:30
+2025-03-18 01:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 02:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84323.4, 'low': 83951.2, 'price': 84081.0}
+2025-03-18 02:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84323.4, Thấp nhất = 83951.2
+2025-03-18 02:00:00 [INFO] - Xác nhận đáy tại $83,785.90 (2/2 nến cao hơn)
+2025-03-18 02:00:00 [INFO] - Detected pivot: HL at 02:00 price: $83785.9
+2025-03-18 02:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,785.90
+2025-03-18 02:00:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 02:00:00 [INFO] - So sánh biên độ: Hiện tại 1.87% vs Cũ 0.73%
+2025-03-18 02:00:00 [INFO] - Xóa pivot cũ HL ($83,785.90) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 02:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83785.9, 'time': '02:00', 'source': 'system'}
+2025-03-18 02:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,951.20
+2025-03-18 02:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,951.20 vào lúc 02:00
+2025-03-18 02:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 02:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84563.3, 'low': 84040.9, 'price': 84462.0}
+2025-03-18 02:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84563.3, Thấp nhất = 84040.9
+2025-03-18 02:30:00 [INFO] - Xác nhận đáy tại $83,951.20 (2/2 nến cao hơn)
+2025-03-18 02:30:00 [INFO] - Detected pivot: HL at 02:30 price: $83951.2
+2025-03-18 02:30:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,951.20
+2025-03-18 02:30:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 02:30:00 [INFO] - So sánh biên độ: Hiện tại 1.97% vs Cũ 0.93%
+2025-03-18 02:30:00 [INFO] - Xóa pivot cũ HL ($83,951.20) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 02:30:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83951.2, 'time': '02:30', 'source': 'system'}
+2025-03-18 02:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $84,040.90
+2025-03-18 02:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $84,040.90 vào lúc 02:30
+2025-03-18 02:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 03:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84594.9, 'low': 84254.6, 'price': 84366.7}
+2025-03-18 03:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84594.9, Thấp nhất = 84254.6
+2025-03-18 03:00:00 [INFO] - Xác nhận đáy tại $84,040.90 (2/2 nến cao hơn)
+2025-03-18 03:00:00 [INFO] - Detected pivot: HL at 03:00 price: $84040.9
+2025-03-18 03:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $84,040.90
+2025-03-18 03:00:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 03:00:00 [INFO] - So sánh biên độ: Hiện tại 2.22% vs Cũ 1.03%
+2025-03-18 03:00:00 [INFO] - Xóa pivot cũ HL ($84,040.90) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 03:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 84040.9, 'time': '03:00', 'source': 'system'}
+2025-03-18 03:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $84,254.60
+2025-03-18 03:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $84,254.60 vào lúc 03:00
+2025-03-18 03:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 03:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84727.1, 'low': 84320.0, 'price': 84436.2}
+2025-03-18 03:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84727.1, Thấp nhất = 84320.0
+2025-03-18 03:30:00 [INFO] - Xác nhận đáy tại $84,254.60 (2/2 nến cao hơn)
+2025-03-18 03:30:00 [INFO] - Detected pivot: HL at 03:30 price: $84254.6
+2025-03-18 03:30:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $84,254.60
+2025-03-18 03:30:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 03:30:00 [INFO] - So sánh biên độ: Hiện tại 2.30% vs Cũ 1.28%
+2025-03-18 03:30:00 [INFO] - Xóa pivot cũ HL ($84,254.60) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 03:30:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 84254.6, 'time': '03:30', 'source': 'system'}
+2025-03-18 03:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $84,320.00
+2025-03-18 03:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $84,320.00 vào lúc 03:30
+2025-03-18 03:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 04:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84464.1, 'low': 83980.0, 'price': 84090.0}
+2025-03-18 04:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84464.1, Thấp nhất = 83980.0
+2025-03-18 04:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,980.00
+2025-03-18 04:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,980.00 vào lúc 04:00
+2025-03-18 04:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 04:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84136.1, 'low': 83806.5, 'price': 83923.4}
+2025-03-18 04:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84136.1, Thấp nhất = 83806.5
+2025-03-18 04:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,806.50
+2025-03-18 04:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,806.50 vào lúc 04:30
+2025-03-18 04:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 05:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84227.3, 'low': 83902.6, 'price': 83925.0}
+2025-03-18 05:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84227.3, Thấp nhất = 83902.6
+2025-03-18 05:00:00 [INFO] - Xác nhận đáy tại $83,806.50 (2/2 nến cao hơn)
+2025-03-18 05:00:00 [INFO] - Detected pivot: HL at 05:00 price: $83806.5
+2025-03-18 05:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,806.50
+2025-03-18 05:00:00 [INFO] - Pivot data saved to Excel with 6 points
+2025-03-18 05:00:00 [INFO] - So sánh biên độ: Hiện tại 1.81% vs Cũ 0.76%
+2025-03-18 05:00:00 [INFO] - Xóa pivot cũ HL ($83,806.50) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 05:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83806.5, 'time': '05:00', 'source': 'system'}
+2025-03-18 05:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,902.60
+2025-03-18 05:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,902.60 vào lúc 05:00
+2025-03-18 05:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 05:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84170.7, 'low': 83837.8, 'price': 84033.3}
+2025-03-18 05:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84170.7, Thấp nhất = 83837.8
+2025-03-18 05:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,837.80
+2025-03-18 05:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,837.80 vào lúc 05:30
+2025-03-18 05:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 06:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84160.0, 'low': 83951.7, 'price': 84144.6}
+2025-03-18 06:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84160.0, Thấp nhất = 83951.7
+2025-03-18 06:00:00 [INFO] - So sánh biên độ: Hiện tại 2.11% vs Cũ 1.51%
+2025-03-18 06:00:00 [INFO] - Xóa pivot cũ LL ($81,938.00) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 06:00:00 [INFO] - Đã xóa pivot: {'type': 'LL', 'price': 81938.0, 'time': '06:00', 'source': 'user'}
+2025-03-18 06:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $84,160.00
+2025-03-18 06:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $84,160.00 vào lúc 06:00
+2025-03-18 06:00:00 [INFO] - Xác nhận đáy tại $83,837.80 (2/2 nến cao hơn)
+2025-03-18 06:00:00 [INFO] - Detected pivot: HL at 06:00 price: $83837.8
+2025-03-18 06:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,837.80
+2025-03-18 06:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 06:00:00 [INFO] - So sánh biên độ: Hiện tại 1.87% vs Cũ 0.79%
+2025-03-18 06:00:00 [INFO] - Xóa pivot cũ HL ($83,837.80) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 06:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83837.8, 'time': '06:00', 'source': 'system'}
+2025-03-18 06:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,951.70
+2025-03-18 06:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,951.70 vào lúc 06:00
+2025-03-18 06:00:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-18 06:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84207.2, 'low': 84011.8, 'price': 84011.8}
+2025-03-18 06:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84207.2, Thấp nhất = 84011.8
+2025-03-18 06:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $84,207.20
+2025-03-18 06:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $84,207.20 vào lúc 06:30
+2025-03-18 06:30:00 [INFO] - Xác nhận đáy tại $83,951.70 (2/2 nến cao hơn)
+2025-03-18 06:30:00 [INFO] - Detected pivot: HL at 06:30 price: $83951.7
+2025-03-18 06:30:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,951.70
+2025-03-18 06:30:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 06:30:00 [INFO] - So sánh biên độ: Hiện tại 1.94% vs Cũ 0.93%
+2025-03-18 06:30:00 [INFO] - Xóa pivot cũ HL ($83,951.70) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 06:30:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83951.7, 'time': '06:30', 'source': 'system'}
+2025-03-18 06:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $84,011.80
+2025-03-18 06:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $84,011.80 vào lúc 06:30
+2025-03-18 06:30:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-18 07:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84029.1, 'low': 83800.0, 'price': 83800.0}
+2025-03-18 07:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84029.1, Thấp nhất = 83800.0
+2025-03-18 07:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $84,029.10
+2025-03-18 07:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $84,029.10 vào lúc 07:00
+2025-03-18 07:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,800.00
+2025-03-18 07:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,800.00 vào lúc 07:00
+2025-03-18 07:00:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-18 07:30:00 [INFO] - Đã thêm dữ liệu giá: {'high': 84097.4, 'low': 83700.0, 'price': 83962.9}
+2025-03-18 07:30:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 84097.4, Thấp nhất = 83700.0
+2025-03-18 07:30:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $84,097.40
+2025-03-18 07:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $84,097.40 vào lúc 07:30
+2025-03-18 07:30:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,700.00
+2025-03-18 07:30:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,700.00 vào lúc 07:30
+2025-03-18 07:30:00 [INFO] - Pivot data saved to Excel with 4 points
+2025-03-18 08:00:00 [INFO] - Đã thêm dữ liệu giá: {'high': 83979.8, 'low': 83708.0, 'price': 83708.1}
+2025-03-18 08:00:00 [INFO] - Thu thập dữ liệu nến 30m: Cao nhất = 83979.8, Thấp nhất = 83708.0
+2025-03-18 08:00:00 [INFO] - Thêm pivot chờ xác nhận: HH tại $83,979.80
+2025-03-18 08:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HH - Giá: $83,979.80 vào lúc 08:00
+2025-03-18 08:00:00 [INFO] - Xác nhận đáy tại $83,700.00 (2/2 nến cao hơn)
+2025-03-18 08:00:00 [INFO] - Detected pivot: HL at 08:00 price: $83700.0
+2025-03-18 08:00:00 [INFO] - Pivot đã được xác nhận và thêm vào: HL - $83,700.00
+2025-03-18 08:00:00 [INFO] - Pivot data saved to Excel with 5 points
+2025-03-18 08:00:00 [INFO] - So sánh biên độ: Hiện tại 1.58% vs Cũ 0.63%
+2025-03-18 08:00:00 [INFO] - Xóa pivot cũ HL ($83,700.00) để thêm pivot mới có biên độ lớn hơn
+2025-03-18 08:00:00 [INFO] - Đã xóa pivot: {'type': 'HL', 'price': 83700.0, 'time': '08:00', 'source': 'system'}
+2025-03-18 08:00:00 [INFO] - Thêm pivot chờ xác nhận: HL tại $83,708.00
+2025-03-18 08:00:00 [INFO] - Đã thêm pivot vào danh sách chờ: HL - Giá: $83,708.00 vào lúc 08:00
+2025-03-18 08:00:00 [INFO] - Pivot data saved to Excel with 4 points
