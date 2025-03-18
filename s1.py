@@ -284,27 +284,55 @@ class PivotData:
 
     def _can_add_pivot(self, price: float) -> bool:
         """Kiểm tra các điều kiện để thêm pivot mới"""
-        combined_pivots = self.get_all_pivots()
-        if not combined_pivots:
+        try:
+            combined_pivots = self.get_all_pivots()
+            if not combined_pivots:
+                save_log("Không có pivot trước đó, cho phép thêm mới", DEBUG_LOG_FILE)
+                return True
+
+            last_pivot = combined_pivots[-1]
+            save_log(f"Kiểm tra điều kiện thêm pivot mới: ${price:,.2f} vs Last=${last_pivot['price']:,.2f}", DEBUG_LOG_FILE)
+
+            # Kiểm tra khoảng cách thời gian
+            last_time = datetime.strptime(last_pivot["time"], "%H:%M")
+            current_time = datetime.now()
+            time_diff = (current_time - last_time).total_seconds() / 1800  # Đổi sang số nến 30m
+            
+            save_log(f"Khoảng cách thời gian: {time_diff:.1f} nến 30m", DEBUG_LOG_FILE)
+            
+            if time_diff < self.MIN_PIVOT_DISTANCE:
+                save_log(f"Từ chối pivot: Quá gần thời gian ({time_diff:.1f} < {self.MIN_PIVOT_DISTANCE} nến)", DEBUG_LOG_FILE)
+                return False
+
+            # Kiểm tra biến động giá
+            price_change = abs(price - last_pivot["price"]) / last_pivot["price"]
+            save_log(f"Biên độ giá: {price_change:.2%}", DEBUG_LOG_FILE)
+            
+            if price_change < self.MIN_PRICE_CHANGE:
+                save_log(f"Từ chối pivot: Biên độ quá nhỏ ({price_change:.2%} < {self.MIN_PRICE_CHANGE:.2%})", DEBUG_LOG_FILE)
+                return False
+
+            # Kiểm tra xu hướng nếu có đủ dữ liệu
+            if len(self.price_history) >= self.TREND_WINDOW:
+                trend = self._calculate_trend([x["price"] for x in self.price_history[-self.TREND_WINDOW:]])
+                save_log(f"Xu hướng hiện tại: {trend:+d}", DEBUG_LOG_FILE)
+                
+                # Thêm logic xử lý dựa trên xu hướng
+                if trend > 0:  # Xu hướng tăng
+                    if price < last_pivot["price"] and last_pivot["type"] in ["HH", "LH"]:
+                        save_log("Từ chối pivot: Giá thấp hơn trong xu hướng tăng", DEBUG_LOG_FILE)
+                        return False
+                elif trend < 0:  # Xu hướng giảm
+                    if price > last_pivot["price"] and last_pivot["type"] in ["LL", "HL"]:
+                        save_log("Từ chối pivot: Giá cao hơn trong xu hướng giảm", DEBUG_LOG_FILE)
+                        return False
+
+            save_log("Chấp nhận pivot mới: Đã thỏa mãn tất cả điều kiện", DEBUG_LOG_FILE)
             return True
 
-        # Kiểm tra khoảng cách thời gian
-        last_pivot = combined_pivots[-1]
-        last_time = datetime.strptime(last_pivot["time"], "%H:%M")
-        current_time = datetime.now()
-        time_diff = (current_time - last_time).total_seconds() / 1800  # Đổi sang số nến 30m
-        
-        if time_diff < self.MIN_PIVOT_DISTANCE:
-            save_log(f"Pivot too close in time: {time_diff} candles", DEBUG_LOG_FILE)
+        except Exception as e:
+            save_log(f"Lỗi kiểm tra điều kiện thêm pivot: {str(e)}", DEBUG_LOG_FILE)
             return False
-
-        # Kiểm tra biến động giá
-        price_change = abs(price - last_pivot["price"]) / last_pivot["price"]
-        if price_change < self.MIN_PRICE_CHANGE:
-            save_log(f"Price change too small: {price_change:.2%}", DEBUG_LOG_FILE)
-            return False
-
-        return True
        
     def _determine_pivot_type(self, price: float, price_type: str) -> str:
         """Xác định loại pivot dựa trên xu hướng và cấu trúc giá"""
@@ -474,39 +502,52 @@ class PivotData:
             remaining_pivots = []
 
             for pivot in self.pending_pivots:
+                save_log(f"Đánh giá pivot: {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES} nến)", DEBUG_LOG_FILE)
+                
                 pivot["confirmation_candles"] += 1
                 
                 # Cập nhật số lượng nến cao/thấp hơn
                 if pivot["type"] in ["H", "HH", "LH"]:  # Đỉnh
                     if current_high > pivot["price"]:
                         pivot["higher_prices"] += 1
+                        save_log(f"Nến hiện tại cao hơn pivot đỉnh (${current_high:,.2f} > ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
                     elif current_high < pivot["price"]:
                         pivot["lower_prices"] += 1
+                        save_log(f"Nến hiện tại thấp hơn pivot đỉnh (${current_high:,.2f} < ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
                 else:  # Đáy
                     if current_low < pivot["price"]:
                         pivot["lower_prices"] += 1
+                        save_log(f"Nến hiện tại thấp hơn pivot đáy (${current_low:,.2f} < ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
                     elif current_low > pivot["price"]:
                         pivot["higher_prices"] += 1
+                        save_log(f"Nến hiện tại cao hơn pivot đáy (${current_low:,.2f} > ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
 
                 # Kiểm tra đủ số nến xác nhận
                 if pivot["confirmation_candles"] >= self.CONFIRMATION_CANDLES:
+                    save_log(f"Đủ số nến xác nhận ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES})", DEBUG_LOG_FILE)
+                    
                     if pivot["type"] in ["H", "HH", "LH"]:  # Xác nhận đỉnh
                         if pivot["lower_prices"] >= 2:  # Ít nhất 2 nến thấp hơn
+                            save_log(f"Xác nhận đỉnh: {pivot['lower_prices']}/{self.CONFIRMATION_CANDLES} nến thấp hơn", DEBUG_LOG_FILE)
                             confirmed_pivots.append(pivot)
-                            save_log(f"Xác nhận đỉnh tại ${pivot['price']:,.2f} ({pivot['lower_prices']}/{self.CONFIRMATION_CANDLES} nến thấp hơn)", DEBUG_LOG_FILE)
+                        else:
+                            save_log(f"Từ chối đỉnh: chỉ có {pivot['lower_prices']}/{self.CONFIRMATION_CANDLES} nến thấp hơn", DEBUG_LOG_FILE)
                     else:  # Xác nhận đáy
                         if pivot["higher_prices"] >= 2:  # Ít nhất 2 nến cao hơn
+                            save_log(f"Xác nhận đáy: {pivot['higher_prices']}/{self.CONFIRMATION_CANDLES} nến cao hơn", DEBUG_LOG_FILE)
                             confirmed_pivots.append(pivot)
-                            save_log(f"Xác nhận đáy tại ${pivot['price']:,.2f} ({pivot['higher_prices']}/{self.CONFIRMATION_CANDLES} nến cao hơn)", DEBUG_LOG_FILE)
+                        else:
+                            save_log(f"Từ chối đáy: chỉ có {pivot['higher_prices']}/{self.CONFIRMATION_CANDLES} nến cao hơn", DEBUG_LOG_FILE)
                 else:
                     remaining_pivots.append(pivot)
+                    save_log(f"Chưa đủ nến xác nhận ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES}), giữ lại trong danh sách chờ", DEBUG_LOG_FILE)
 
-            self.pending_pivots = remaining_pivots
-            return confirmed_pivots
+                self.pending_pivots = remaining_pivots
+                return confirmed_pivots
 
-        except Exception as e:
-            save_log(f"Lỗi khi xác nhận pending pivots: {str(e)}", DEBUG_LOG_FILE)
-            return []
+            except Exception as e:
+                save_log(f"Lỗi khi xác nhận pending pivots: {str(e)}", DEBUG_LOG_FILE)
+                return []
     
 # Initialize PivotData instance
 pivot_data = PivotData()
@@ -677,9 +718,25 @@ def detect_pivot(price, price_type):
     try:
         current_time = datetime.now().strftime("%H:%M")
         
-        # Validate các pivot đang chờ trước khi xem xét pivot mới
+        # Validate các pivot đang chờ
         if hasattr(pivot_data, 'price_history') and len(pivot_data.price_history) > 0:
             current_candle = pivot_data.price_history[-1]
+            
+            # So sánh biên độ TRƯỚC khi xác nhận
+            all_pivots = pivot_data.get_all_pivots()
+            if all_pivots:
+                current_price_change = abs(price - all_pivots[-1]["price"]) / price
+                last_pivot = all_pivots[-1]
+                last_price_change = abs(last_pivot["price"] - (all_pivots[-2]["price"] if len(all_pivots) > 1 else last_pivot["price"])) / last_pivot["price"]
+                
+                save_log(f"So sánh biên độ trước xác nhận: Hiện tại {current_price_change:.2%} vs Cũ {last_price_change:.2%}", DEBUG_LOG_FILE)
+                
+                # Nếu biên độ nhỏ hơn, bỏ qua pivot này
+                if current_price_change <= last_price_change:
+                    save_log(f"Bỏ qua pivot do biên độ nhỏ hơn (${price:,.2f})", DEBUG_LOG_FILE)
+                    return
+
+            # Sau khi kiểm tra biên độ, tiến hành xác nhận pivot
             confirmed_pivots = pivot_data.validate_pending_pivots(
                 current_high=current_candle['high'],
                 current_low=current_candle['low']
@@ -687,6 +744,13 @@ def detect_pivot(price, price_type):
 
             # Thêm các pivot đã được xác nhận
             for confirmed_pivot in confirmed_pivots:
+                # Kiểm tra lại biên độ một lần nữa trước khi thêm
+                if all_pivots:
+                    confirmed_price_change = abs(confirmed_pivot["price"] - all_pivots[-1]["price"]) / confirmed_pivot["price"]
+                    if confirmed_price_change <= last_price_change:
+                        save_log(f"Bỏ qua pivot đã xác nhận do biên độ nhỏ hơn (${confirmed_pivot['price']:,.2f})", DEBUG_LOG_FILE)
+                        continue
+
                 if pivot_data.add_detected_pivot(confirmed_pivot["price"], confirmed_pivot["type"]):
                     save_log(f"Pivot đã được xác nhận và thêm vào: {confirmed_pivot['type']} - ${confirmed_pivot['price']:,.2f}", DEBUG_LOG_FILE)
                     save_to_excel()
@@ -704,17 +768,8 @@ def detect_pivot(price, price_type):
         # Kiểm tra pivot trong cùng thời điểm
         for pivot in all_pivots:
             if pivot["time"] == current_time:
-                current_price_change = abs(price - (all_pivots[-1]["price"] if all_pivots else price)) / price
-                existing_price_change = abs(pivot["price"] - (all_pivots[-2]["price"] if len(all_pivots) > 1 else pivot["price"])) / pivot["price"]
-                
-                save_log(f"So sánh biên độ: Hiện tại {current_price_change:.2%} vs Cũ {existing_price_change:.2%}", DEBUG_LOG_FILE)
-                
-                if current_price_change <= existing_price_change:
-                    save_log(f"Bỏ qua pivot tại {current_time} do đã có pivot mạnh hơn (giá: ${price:,.2f})", DEBUG_LOG_FILE)
-                    return
-                else:
-                    save_log(f"Xóa pivot cũ {pivot['type']} (${pivot['price']:,.2f}) để thêm pivot mới có biên độ lớn hơn", DEBUG_LOG_FILE)
-                    pivot_data.remove_pivot(pivot)
+                save_log(f"Đã có pivot tại {current_time}, kiểm tra biên độ", DEBUG_LOG_FILE)
+                return
 
         # Kiểm tra điều kiện thêm pivot mới
         if not pivot_data._can_add_pivot(price):
@@ -725,7 +780,7 @@ def detect_pivot(price, price_type):
         if not pivot_type:
             return
 
-        # Thêm vào danh sách chờ xác nhận thay vì thêm trực tiếp
+        # Thêm vào danh sách chờ xác nhận
         if pivot_data.add_pending_pivot(price, pivot_type, current_time):
             save_log(f"Đã thêm pivot vào danh sách chờ: {pivot_type} - Giá: ${price:,.2f} vào lúc {current_time}", DEBUG_LOG_FILE)
             
@@ -863,34 +918,38 @@ def moc(update: Update, context: CallbackContext):
                 
                 save_log(f"Kiểm tra logic: {curr_pivot['type']} (${curr_pivot['price']}) vs {prev_pivot['type']} (${prev_pivot['price']})", DEBUG_LOG_FILE)
                 
-                # Logic kiểm tra đã sửa
+                # Logic kiểm tra mới
                 if curr_pivot['type'] == "LH":
-                    # LH phải cao hơn đáy trước đó (nếu là LL)
-                    if prev_pivot['type'] == "LL" and curr_pivot['price'] <= prev_pivot['price']:
-                        error_msg = f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá cao hơn LL trước đó!"
-                        save_log(error_msg, DEBUG_LOG_FILE)
-                        update.message.reply_text(error_msg)
-                        return
-                    # LH phải thấp hơn đỉnh trước đó (nếu là HH)
-                    if prev_pivot['type'] == "HH" and curr_pivot['price'] >= prev_pivot['price']:
-                        error_msg = f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá thấp hơn HH trước đó!"
-                        save_log(error_msg, DEBUG_LOG_FILE)
-                        update.message.reply_text(error_msg)
-                        return
+                    if prev_pivot['type'] == "LL":
+                        # LH phải cao hơn LL trước đó
+                        if curr_pivot['price'] <= prev_pivot['price']:
+                            error_msg = f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá cao hơn LL trước đó!"
+                            save_log(error_msg, DEBUG_LOG_FILE)
+                            update.message.reply_text(error_msg)
+                            return
+                    elif prev_pivot['type'] == "HH":
+                        # LH phải thấp hơn HH trước đó 
+                        if curr_pivot['price'] >= prev_pivot['price']:
+                            error_msg = f"⚠️ Lỗi logic: LH tại {curr_pivot['time']} phải có giá thấp hơn HH trước đó!"
+                            save_log(error_msg, DEBUG_LOG_FILE)
+                            update.message.reply_text(error_msg)
+                            return
                         
                 elif curr_pivot['type'] == "HL":
-                    # HL phải thấp hơn đỉnh trước đó (nếu là HH hoặc LH)
-                    if prev_pivot['type'] in ["HH", "LH"] and curr_pivot['price'] >= prev_pivot['price']:
-                        error_msg = f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá thấp hơn {prev_pivot['type']} trước đó!"
-                        save_log(error_msg, DEBUG_LOG_FILE)
-                        update.message.reply_text(error_msg)
-                        return
-                    # HL phải cao hơn đáy trước đó (nếu là LL)
-                    if prev_pivot['type'] == "LL" and curr_pivot['price'] <= prev_pivot['price']:
-                        error_msg = f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá cao hơn LL trước đó!"
-                        save_log(error_msg, DEBUG_LOG_FILE)
-                        update.message.reply_text(error_msg)
-                        return
+                    if prev_pivot['type'] in ["LH", "HH"]:
+                        # HL phải thấp hơn đỉnh trước đó (LH hoặc HH)
+                        if curr_pivot['price'] >= prev_pivot['price']:
+                            error_msg = f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá thấp hơn {prev_pivot['type']} trước đó!"
+                            save_log(error_msg, DEBUG_LOG_FILE)
+                            update.message.reply_text(error_msg)
+                            return
+                    elif prev_pivot['type'] == "LL":
+                        # HL phải cao hơn LL trước đó
+                        if curr_pivot['price'] <= prev_pivot['price']:
+                            error_msg = f"⚠️ Lỗi logic: HL tại {curr_pivot['time']} phải có giá cao hơn LL trước đó!"
+                            save_log(error_msg, DEBUG_LOG_FILE)
+                            update.message.reply_text(error_msg)
+                            return
                         
                 elif curr_pivot['type'] == "HH":
                     # HH luôn phải cao hơn pivot trước đó
