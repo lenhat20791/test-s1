@@ -1,0 +1,312 @@
+from binance.client import Client
+from datetime import datetime, timedelta
+import pandas as pd
+import pytz
+from pathlib import Path
+from s1 import pivot_data, detect_pivot, save_log
+
+DEBUG_LOG_FILE = "debug_historical_test.log"
+
+class S1HistoricalTester:
+    def __init__(self, user_login="lenhat20791"):
+        self.client = Client()
+        self.debug_log_file = DEBUG_LOG_FILE
+        self.user_login = user_login
+        self.clear_log_file()
+
+    def clear_log_file(self):
+        """Xóa nội dung file log cũ"""
+        Path(self.debug_log_file).write_text("")
+        
+    def log_message(self, message):
+        """Ghi log ra console và file"""
+        print(message)
+        with open(self.debug_log_file, "a", encoding="utf-8") as f:
+            f.write(f"{message}\n")
+
+    def add_known_pivots(self):
+        """Thêm các pivot đã biết từ dữ liệu thực"""
+        user_pivots = [
+            {"time": "06:00", "type": "LL", "price": 81931},
+            {"time": "11:00", "type": "LH", "price": 83843}
+        ]
+        
+        for pivot in user_pivots:
+            if pivot_data.add_user_pivot(pivot["type"], pivot["price"], pivot["time"]):
+                self.log_message(f"✅ Đã thêm user pivot: {pivot['type']} tại ${pivot['price']} ({pivot['time']})")
+            else:
+                self.log_message(f"❌ Không thể thêm user pivot: {pivot['type']} tại {pivot['time']}")
+
+    def save_test_results(self, df, results):
+        """Lưu kết quả test vào Excel và vẽ biểu đồ"""
+        try:
+            # Thêm cột pivot_type và pending_status vào DataFrame
+            df['pivot_type'] = ''
+            df['pending_status'] = ''
+            
+            # Đánh dấu các pivot đã xác nhận
+            for pivot in pivot_data.get_all_pivots():
+                mask = (df['time'] == pivot['time'])
+                df.loc[mask, 'pivot_type'] = pivot['type']
+            
+            # Đánh dấu các pending pivots
+            for pivot in pivot_data.pending_pivots:
+                mask = (df['time'] == pivot['time'])
+                df.loc[mask, 'pending_status'] = f"Pending {pivot['type']} ({pivot['confirmation_candles']}/3)"
+            
+            # Lưu vào Excel
+            writer = pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter')
+            df.to_excel(writer, sheet_name='Test Data', index=False)
+            
+            # Tạo workbook và worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Test Data']
+            
+            # Định dạng cho các cột
+            price_format = workbook.add_format({'num_format': '$#,##0.00'})
+            pivot_format = workbook.add_format({'bold': True, 'color': 'red'})
+            pending_format = workbook.add_format({'color': 'blue', 'italic': True})
+            
+            # Áp dụng định dạng
+            worksheet.set_column('C:E', 12, price_format)  # high, low, price columns
+            worksheet.set_column('F:F', 15, pivot_format)  # pivot_type column
+            worksheet.set_column('G:G', 20, pending_format)  # pending_status column
+            
+            # Tạo biểu đồ
+            chart = workbook.add_chart({'type': 'line'})
+            
+            # Thêm series price
+            chart.add_series({
+                'name': 'Price',
+                'categories': '=Test Data!$B$2:$B$' + str(len(df) + 1),
+                'values': '=Test Data!$E$2:$E$' + str(len(df) + 1),
+            })
+            
+            # Định dạng biểu đồ
+            chart.set_title({'name': 'Price and Pivots - Test Results'})
+            chart.set_x_axis({'name': 'Time'})
+            chart.set_y_axis({'name': 'Price'})
+            
+            # Chèn biểu đồ vào worksheet
+            worksheet.insert_chart('I2', chart)
+            
+            writer.close()
+            self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx")
+            return True
+            
+        except Exception as e:
+            self.log_message(f"❌ Lỗi khi lưu Excel: {str(e)}")
+            return False
+
+    def analyze_pivot_points(self, df, time_str):
+        """Phân tích chi tiết tại thời điểm cụ thể"""
+        try:
+            row_idx = df[df['time'] == time_str].index[0]
+            row = df.iloc[row_idx]
+            
+            self.log_message(f"\n=== Phân tích chi tiết tại {time_str} ===")
+            self.log_message(f"Nến hiện tại:")
+            self.log_message(f"High: ${row['high']:,.2f}")
+            self.log_message(f"Low: ${row['low']:,.2f}")
+            self.log_message(f"Close: ${row['price']:,.2f}")
+            
+            # Lấy 3 nến trước đó để phân tích xác nhận
+            if row_idx >= 3:
+                self.log_message(f"\n3 nến trước (cho xác nhận):")
+                for i in range(3):
+                    prev = df.iloc[row_idx-i-1]
+                    self.log_message(f"{prev['time']}:")
+                    self.log_message(f"High: ${prev['high']:,.2f}")
+                    self.log_message(f"Low: ${prev['low']:,.2f}")
+                    self.log_message(f"Close: ${prev['price']:,.2f}")
+            
+            # Phân tích pending pivots
+            if pivot_data.pending_pivots:
+                self.log_message("\nPending Pivots hiện tại:")
+                for p in pivot_data.pending_pivots:
+                    self.log_message(f"- Type: {p['type']}")
+                    self.log_message(f"  Giá ban đầu: ${p['price']:,.2f}")
+                    self.log_message(f"  Thời gian: {p['time']}")
+                    self.log_message(f"  Xác nhận: {p['confirmation_candles']}/3")
+                    
+                    if p['type'] in ["H", "HH", "LH"]:
+                        self.log_message(f"  Giá cao nhất: ${p['highest_price']:,.2f}")
+                        self.log_message(f"  Tại: {p['highest_time']}")
+                        self.log_message(f"  Số nến thấp hơn: {p['lower_prices']}")
+                    else:
+                        self.log_message(f"  Giá thấp nhất: ${p['lowest_price']:,.2f}")
+                        self.log_message(f"  Tại: {p['lowest_time']}")
+                        self.log_message(f"  Số nến cao hơn: {p['higher_prices']}")
+            
+            # Kiểm tra điều kiện pivot
+            all_pivots = pivot_data.get_all_pivots()
+            if all_pivots:
+                last_pivot = all_pivots[-1]
+                last_time = datetime.strptime(last_pivot["time"], "%H:%M")
+                current_time = datetime.strptime(row['time'], "%H:%M")
+                time_diff = (current_time - last_time).total_seconds() / 1800  # Chuyển sang số nến 30m
+                price_change = abs(row['price'] - last_pivot["price"]) / last_pivot["price"]
+                
+                self.log_message(f"\nSo sánh với pivot trước:")
+                self.log_message(f"- Pivot trước: {last_pivot['type']} tại ${last_pivot['price']:,.2f} ({last_pivot['time']})")
+                self.log_message(f"- Khoảng cách: {time_diff:.1f} nến")
+                self.log_message(f"- Biên độ giá: {price_change:.2%}")
+                
+        except Exception as e:
+            self.log_message(f"❌ Lỗi khi phân tích pivot point: {str(e)}")
+
+    def run_test(self):
+        """Chạy historical test cho S1"""
+        try:
+            # Set thời gian test từ 00:00 17/03 đến hiện tại
+            current_time = datetime(2025, 3, 18, 3, 13, 26)    # Current time from input
+            start_time = datetime(2025, 3, 17, 0, 0, 0)       # Start from 00:00 17/03
+            
+            self.log_message(f"\n=== Bắt đầu test S1 ===")
+            self.log_message(f"User: {self.user_login}")
+            self.log_message(f"Thời gian bắt đầu: {start_time}")
+            self.log_message(f"Thời gian kết thúc: {current_time}")
+            
+            # Lấy dữ liệu từ Binance
+            klines = self.client.get_historical_klines(
+                "BTCUSDT",  # Futures
+                Client.KLINE_INTERVAL_30MINUTE,
+                start_str=int(start_time.timestamp() * 1000),
+                end_str=int(current_time.timestamp() * 1000)
+            )
+            
+            if not klines:
+                self.log_message("Không tìm thấy dữ liệu cho khoảng thời gian này")
+                return
+            
+            # Chuyển đổi dữ liệu
+            df = pd.DataFrame(klines, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 
+                'volume', 'close_time', 'quote_volume', 'trades',
+                'buy_base_volume', 'buy_quote_volume', 'ignore'
+            ])
+            
+            # Xử lý dữ liệu
+            df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df['time'] = df['datetime'].dt.strftime('%H:%M')
+            df = df[['datetime', 'time', 'high', 'low', 'close']]
+            df = df.rename(columns={'close': 'price'})
+            
+            for col in ['high', 'low', 'price']:
+                df[col] = df[col].astype(float)
+            
+            self.log_message(f"\nTổng số nến: {len(df)}")
+            
+            # Reset trạng thái S1 và thêm các pivot đã biết
+            pivot_data.clear_all()
+            
+            # Thêm 2 pivot points đã biết
+            initial_pivots = [
+                {"time": "06:00", "type": "LL", "price": 81931},
+                {"time": "11:00", "type": "LH", "price": 83843}
+            ]
+            
+            for pivot in initial_pivots:
+                if pivot_data.add_user_pivot(pivot["type"], pivot["price"], pivot["time"]):
+                    self.log_message(f"✅ Đã thêm user pivot: {pivot['type']} tại ${pivot['price']} ({pivot['time']})")
+                else:
+                    self.log_message(f"❌ Không thể thêm user pivot: {pivot['type']} tại {pivot['time']}")
+            
+            # Chạy test
+            self.log_message("\nBắt đầu phát hiện pivot...")
+            results = []
+            
+            # Các thời điểm quan trọng cần phân tích chi tiết
+            important_times = ['06:00', '11:00']
+            
+            for index, row in df.iterrows():
+                # Cập nhật price history
+                price_data = {
+                    'time': row['time'],
+                    'price': row['price'],
+                    'high': row['high'],
+                    'low': row['low']
+                }
+                
+                # Log số pending pivots hiện tại
+                self.log_message(f"\nSố pending pivots: {len(pivot_data.pending_pivots)}")
+                if pivot_data.pending_pivots:
+                    self.log_message("Chi tiết pending pivots:")
+                    for p in pivot_data.pending_pivots:
+                        self.log_message(f"- Type: {p['type']}, Price: ${p['price']:,.2f}, Confirmations: {p['confirmation_candles']}/3")
+                        if p['type'] in ["H", "HH", "LH"]:
+                            self.log_message(f"  Số nến thấp hơn: {p['lower_prices']}")
+                        else:
+                            self.log_message(f"  Số nến cao hơn: {p['higher_prices']}")
+                
+                # Phân tích chi tiết tại các thời điểm quan trọng
+                if row['time'] in important_times:
+                    self.analyze_pivot_points(df, row['time'])
+                
+                # Thêm dữ liệu giá và xử lý
+                pivot_data.add_price_data(price_data)
+                
+                # Log kết quả kiểm tra high/low
+                self.log_message(f"Checking High: ${row['high']:,.2f} -> Result: {pivot_data.detect_pivot(row['high'], 'H')}")
+                self.log_message(f"Checking Low: ${row['low']:,.2f} -> Result: {pivot_data.detect_pivot(row['low'], 'L')}")
+                
+                # Log điều kiện thêm pivot
+                all_pivots = pivot_data.get_all_pivots()
+                if all_pivots:
+                    last_pivot = all_pivots[-1]
+                    time_diff = (datetime.strptime(row['time'], "%H:%M") - 
+                               datetime.strptime(last_pivot["time"], "%H:%M")).total_seconds() / 1800
+                    price_change = abs(row['price'] - last_pivot["price"]) / last_pivot["price"]
+                    
+                    self.log_message("\nKiểm tra điều kiện thêm pivot:")
+                    self.log_message(f"Khoảng cách thời gian: {time_diff:.1f} nến")
+                    self.log_message(f"Biên độ giá: {price_change:.2%}")
+                    self.log_message(f"So với pivot trước ({last_pivot['type']} at {last_pivot['time']})")
+                
+                # Thu thập kết quả các pivot đã xác nhận
+                all_pivots = pivot_data.get_all_pivots()  # Lấy tất cả pivot (confirmed + user)
+                for pivot in all_pivots:
+                    if pivot not in results:
+                        results.append(pivot)
+            
+            # Tổng kết kết quả
+            self.log_message("\n=== Tổng kết kết quả ===")
+            self.log_message(f"Tổng số nến: {len(df)}")
+            self.log_message(f"Tổng số pivot đã xác nhận: {len(results)}")
+            self.log_message(f"Số pivot đang chờ xác nhận: {len(pivot_data.pending_pivots)}")
+            
+            if results:
+                self.log_message("\nDanh sách pivot đã xác nhận:")
+                for pivot in results:
+                    self.log_message(f"\nThời gian: {pivot['time']}")
+                    self.log_message(f"Loại: {pivot['type']}")
+                    self.log_message(f"Giá: ${pivot['price']:,.2f}")
+            
+            if pivot_data.pending_pivots:
+                self.log_message("\nDanh sách pivot đang chờ xác nhận:")
+                for pivot in pivot_data.pending_pivots:
+                    self.log_message(f"\nThời gian: {pivot['time']}")
+                    self.log_message(f"Loại: {pivot['type']}")
+                    self.log_message(f"Giá ban đầu: ${pivot['price']:,.2f}")
+                    self.log_message(f"Xác nhận: {pivot['confirmation_candles']}/3")
+                    if pivot['type'] in ["H", "HH", "LH"]:
+                        self.log_message(f"Số nến thấp hơn: {pivot['lower_prices']}")
+                    else:
+                        self.log_message(f"Số nến cao hơn: {pivot['higher_prices']}")
+            
+            # Lưu kết quả vào Excel
+            self.save_test_results(df, results)
+            
+            return results
+            
+        except Exception as e:
+            error_msg = f"❌ Lỗi khi chạy test: {str(e)}"
+            self.log_message(error_msg)
+            return None
+
+# Entry point
+if __name__ == "__main__":
+    tester = S1HistoricalTester()
+    print("Đang chạy historical test cho S1...")
+    results = tester.run_test()
+    print("\nTest hoàn tất! Kiểm tra file debug_historical_test.log và test_results.xlsx để xem chi tiết.")
