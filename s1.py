@@ -22,6 +22,13 @@ PATTERN_LOG_FILE = "pattern_log.txt"
 DEBUG_LOG_FILE = "debug_historical_test.log"
 EXCEL_FILE = "pivots.xlsx"
 
+def save_log(log_message, filename):
+    try:
+        with open(file_path, "a", encoding="utf-8") as f:
+            f.write(message + "\n")
+    except Exception as e:
+        print(f"Error saving log: {str(e)}")
+        
 # Setup Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -573,16 +580,6 @@ pivot_data = PivotData()
 def detect_pivot(price, direction):
     return pivot_data.detect_pivot(price, direction)
     
-# Initialize PivotData instance
-pivot_data = PivotData()
-
-def save_log(log_message, filename):
-    try:
-        with open(file_path, "a", encoding="utf-8") as f:
-            f.write(message + "\n")
-    except Exception as e:
-        print(f"Error saving log: {str(e)}")
-
 def save_to_excel():
     """ 
     Lưu dữ liệu pivot vào file Excel với các cải tiến:
