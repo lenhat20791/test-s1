@@ -39,12 +39,12 @@ class PivotData:
     def __init__(self):
         self.detected_pivots = []  
         self.user_provided_pivots = []  
-        self.MIN_PRICE_CHANGE = 0.004  # Tăng từ 0.002 lên 0.004 vì timeframe lớn hơn
-        self.MIN_PIVOT_DISTANCE = 2    # Giảm từ 3 xuống 2 vì khoảng thời gian giữa các nến dài hơn
-        self.TREND_WINDOW = 5          # Giảm từ 10 xuống 5 vì timeframe lớn hơn
+        self.MIN_PRICE_CHANGE = 0.004  
+        self.MIN_PIVOT_DISTANCE = 2 
+        self.CONFIRMATION_CANDLES = 3    # Tăng lên 3 nến xác nhận
+        self.TREND_WINDOW = 5          
         self.MAX_PIVOTS = 15  
         self.last_sync_time = datetime.now()
-        self.CONFIRMATION_CANDLES = 2   # Giảm từ 3 xuống 2 vì timeframe lớn hơn
         self.pending_pivots = []
 
     def add_price_data(self, price_data: dict):
@@ -497,10 +497,10 @@ class PivotData:
 
     def validate_pending_pivots(self, current_high: float, current_low: float) -> list:
         """Kiểm tra và xác nhận các pivot đang chờ"""
-        try:
-            confirmed_pivots = []
-            remaining_pivots = []
+        confirmed_pivots = []
+        remaining_pivots = []
 
+        try:
             for pivot in self.pending_pivots:
                 save_log(f"Đánh giá pivot: {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES} nến)", DEBUG_LOG_FILE)
                 
@@ -542,12 +542,12 @@ class PivotData:
                     remaining_pivots.append(pivot)
                     save_log(f"Chưa đủ nến xác nhận ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES}), giữ lại trong danh sách chờ", DEBUG_LOG_FILE)
 
-                self.pending_pivots = remaining_pivots
-                return confirmed_pivots
+            self.pending_pivots = remaining_pivots
+            return confirmed_pivots
 
-            except Exception as e:
-                save_log(f"Lỗi khi xác nhận pending pivots: {str(e)}", DEBUG_LOG_FILE)
-                return []
+        except Exception as e:
+            save_log(f"Lỗi khi xác nhận pending pivots: {str(e)}", DEBUG_LOG_FILE)
+            return []
     
 # Initialize PivotData instance
 pivot_data = PivotData()
