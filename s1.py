@@ -37,25 +37,65 @@ binance_client = Client(BINANCE_API_KEY, BINANCE_API_SECRET)
 
 class PivotData:
     def __init__(self):
-        self.detected_pivots = []  
-        self.user_provided_pivots = []  
-        self.MIN_PRICE_CHANGE = 0.004  
-        self.MIN_PIVOT_DISTANCE = 2 
-        self.CONFIRMATION_CANDLES = 3    # Tăng lên 3 nến xác nhận
-        self.TREND_WINDOW = 5          
-        self.MAX_PIVOTS = 15  
-        self.last_sync_time = datetime.now()
-        self.pending_pivots = []
-
-    def add_price_data(self, price_data: dict):
-        """Thêm dữ liệu giá mới vào price_history"""
-        if not hasattr(self, 'price_history'):
-            self.price_history = []
+        # Constants
+        self.MIN_PRICE_CHANGE = 0.004  # 0.4%
+        self.MIN_PIVOT_DISTANCE = 2    # 2 nến
+        self.CONFIRMATION_CANDLES = 3   # Tăng lên 3 nến xác nhận
+        self.TREND_WINDOW = 5          # Cửa sổ xu hướng
+        self.TREND_THRESHOLD = 0.003   # Ngưỡng xu hướng 0.3%
         
-        self.price_history.append(price_data)
-        if len(self.price_history) > 100:  # Giữ 100 điểm dữ liệu gần nhất
-            self.price_history.pop(0)
-        save_log(f"Đã thêm dữ liệu giá: {price_data}", DEBUG_LOG_FILE)
+        # Data storage
+        self.price_history = []
+        self.pending_pivots = []
+        self.confirmed_pivots = []
+        self.user_pivots = []
+
+    def add_price_data(self, data):
+        """Thêm dữ liệu giá mới và xử lý"""
+        try:
+            current_price = data["price"]
+            current_time = data["time"]
+            
+            save_log("\n=== Xử lý nến mới ===", DEBUG_LOG_FILE)
+            save_log(f"Thời gian: {current_time}", DEBUG_LOG_FILE)
+            save_log(f"Giá: ${current_price:,.2f}", DEBUG_LOG_FILE)
+            
+            # Log pending pivots hiện tại
+            if self.pending_pivots:
+                save_log("\nPending Pivots:", DEBUG_LOG_FILE)
+                for p in self.pending_pivots:
+                    save_log(f"- {p['type']} tại ${p['price']:,.2f} ({p['time']})", DEBUG_LOG_FILE)
+                    save_log(f"  Xác nhận: {p['confirmation_candles']}/3", DEBUG_LOG_FILE)
+                    if p['type'] in ["H", "HH", "LH"]:
+                        save_log(f"  Số nến thấp hơn: {p['lower_prices']}", DEBUG_LOG_FILE)
+                    else:
+                        save_log(f"  Số nến cao hơn: {p['higher_prices']}", DEBUG_LOG_FILE)
+            
+            # Thêm vào price history
+            self.price_history.append(data)
+            
+            # Xác nhận các pending pivots
+            confirmed = self.validate_pending_pivots(current_price, current_time)
+            if confirmed:
+                for pivot in confirmed:
+                    self.add_pivot(pivot["type"], pivot["price"], pivot["time"])
+            
+            # Phát hiện pivot mới từ high và low
+            high_pivot = self.detect_pivot(data["high"], 'H')
+            low_pivot = self.detect_pivot(data["low"], 'L')
+            
+            # Thêm vào pending nếu phát hiện được
+            if high_pivot:
+                self.add_pending_pivot(high_pivot, data["high"], data["time"])
+                
+            if low_pivot:
+                self.add_pending_pivot(low_pivot, data["low"], data["time"])
+                
+            return True
+            
+        except Exception as e:
+            save_log(f"Lỗi khi thêm price data: {str(e)}", DEBUG_LOG_FILE)
+            return False
     
     def get_pivot_support_resistance(self, lookback: int = 20) -> dict:
         """
@@ -406,11 +446,20 @@ class PivotData:
         avg_low = sum(lower_prices) / len(lower_prices)
         return "HL" if price > avg_low else None
 
-    def get_all_pivots(self) -> list:
-        """Lấy tất cả pivot đã sắp xếp theo thời gian"""
-        all_pivots = self.user_provided_pivots + self.detected_pivots
-        all_pivots.sort(key=lambda x: datetime.strptime(x["time"], "%H:%M"))
-        return all_pivots
+    def get_all_pivots(self):
+        """Lấy tất cả các pivot theo thứ tự thời gian"""
+        try:
+            # Kết hợp confirmed_pivots và user_pivots
+            all_pivots = self.confirmed_pivots + self.user_pivots
+            
+            # Sắp xếp theo thời gian
+            all_pivots.sort(key=lambda x: datetime.strptime(x["time"], "%H:%M"))
+            
+            return all_pivots
+            
+        except Exception as e:
+            save_log(f"Lỗi khi lấy all pivots: {str(e)}", DEBUG_LOG_FILE)
+            return []
 
     def clear_all(self):
         """Xóa tất cả pivot points"""
@@ -476,75 +525,94 @@ class PivotData:
         except Exception as e:
             save_log(f"Lỗi khi xóa pivot: {str(e)}", DEBUG_LOG_FILE)  
     
-    def add_pending_pivot(self, price: float, price_type: str, current_time: str):
-        """Thêm một pivot vào danh sách chờ xác nhận"""
+    def add_pending_pivot(self, pivot_type, price, time):
+        """Thêm một pivot vào danh sách chờ"""
         try:
+            # Cấu trúc mới cho pending pivot
             pending_pivot = {
-                "type": price_type,
+                "time": time,
                 "price": price,
-                "time": current_time,
+                "type": pivot_type,
                 "confirmation_candles": 0,
-                "higher_prices": 0,  # Số nến có giá cao hơn
-                "lower_prices": 0,   # Số nến có giá thấp hơn
-                "source": "system"
+                "highest_price": price if pivot_type in ["H", "HH", "LH"] else None,
+                "lowest_price": price if pivot_type in ["L", "LL", "HL"] else None,
+                "highest_time": time if pivot_type in ["H", "HH", "LH"] else None,
+                "lowest_time": time if pivot_type in ["L", "LL", "HL"] else None,
+                "lower_prices": 0,
+                "higher_prices": 0
             }
+            
             self.pending_pivots.append(pending_pivot)
-            save_log(f"Thêm pivot chờ xác nhận: {price_type} tại ${price:,.2f}", DEBUG_LOG_FILE)
+            save_log(f"Đã thêm pending pivot: {pivot_type} tại ${price:,.2f} ({time})", DEBUG_LOG_FILE)
             return True
+            
         except Exception as e:
             save_log(f"Lỗi khi thêm pending pivot: {str(e)}", DEBUG_LOG_FILE)
             return False
 
-    def validate_pending_pivots(self, current_high: float, current_low: float) -> list:
-        """Kiểm tra và xác nhận các pivot đang chờ"""
-        confirmed_pivots = []
-        remaining_pivots = []
-
+    def validate_pending_pivots(self, current_price, current_time):
+        """Xác nhận các pivot đang chờ"""
         try:
+            confirmed_pivots = []
+            remaining_pivots = []
+            
             for pivot in self.pending_pivots:
-                save_log(f"Đánh giá pivot: {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES} nến)", DEBUG_LOG_FILE)
-                
                 pivot["confirmation_candles"] += 1
                 
-                # Cập nhật số lượng nến cao/thấp hơn
-                if pivot["type"] in ["H", "HH", "LH"]:  # Đỉnh
-                    if current_high > pivot["price"]:
-                        pivot["higher_prices"] += 1
-                        save_log(f"Nến hiện tại cao hơn pivot đỉnh (${current_high:,.2f} > ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
-                    elif current_high < pivot["price"]:
+                # Xử lý đỉnh
+                if pivot["type"] in ["H", "HH", "LH"]:
+                    if current_price > pivot["highest_price"]:
+                        # Cập nhật giá cao mới
+                        pivot["highest_price"] = current_price
+                        pivot["highest_time"] = current_time
+                        pivot["confirmation_candles"] = 0  # Reset count
+                        pivot["lower_prices"] = 0
+                    else:
                         pivot["lower_prices"] += 1
-                        save_log(f"Nến hiện tại thấp hơn pivot đỉnh (${current_high:,.2f} < ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
-                else:  # Đáy
-                    if current_low < pivot["price"]:
-                        pivot["lower_prices"] += 1
-                        save_log(f"Nến hiện tại thấp hơn pivot đáy (${current_low:,.2f} < ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
-                    elif current_low > pivot["price"]:
-                        pivot["higher_prices"] += 1
-                        save_log(f"Nến hiện tại cao hơn pivot đáy (${current_low:,.2f} > ${pivot['price']:,.2f})", DEBUG_LOG_FILE)
-
-                # Kiểm tra đủ số nến xác nhận
-                if pivot["confirmation_candles"] >= self.CONFIRMATION_CANDLES:
-                    save_log(f"Đủ số nến xác nhận ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES})", DEBUG_LOG_FILE)
-                    
-                    if pivot["type"] in ["H", "HH", "LH"]:  # Xác nhận đỉnh
-                        if pivot["lower_prices"] >= 2:  # Ít nhất 2 nến thấp hơn
-                            save_log(f"Xác nhận đỉnh: {pivot['lower_prices']}/{self.CONFIRMATION_CANDLES} nến thấp hơn", DEBUG_LOG_FILE)
-                            confirmed_pivots.append(pivot)
+                        
+                    # Kiểm tra xác nhận - cần 3 nến thấp hơn
+                    if pivot["confirmation_candles"] >= 3:
+                        if pivot["lower_prices"] >= 3:
+                            confirmed_pivot = {
+                                "time": pivot["highest_time"],
+                                "price": pivot["highest_price"],
+                                "type": pivot["type"]
+                            }
+                            confirmed_pivots.append(confirmed_pivot)
+                            save_log(f"✅ Xác nhận pivot đỉnh: {pivot['type']} tại ${pivot['highest_price']:,.2f}", DEBUG_LOG_FILE)
                         else:
-                            save_log(f"Từ chối đỉnh: chỉ có {pivot['lower_prices']}/{self.CONFIRMATION_CANDLES} nến thấp hơn", DEBUG_LOG_FILE)
-                    else:  # Xác nhận đáy
-                        if pivot["higher_prices"] >= 2:  # Ít nhất 2 nến cao hơn
-                            save_log(f"Xác nhận đáy: {pivot['higher_prices']}/{self.CONFIRMATION_CANDLES} nến cao hơn", DEBUG_LOG_FILE)
-                            confirmed_pivots.append(pivot)
-                        else:
-                            save_log(f"Từ chối đáy: chỉ có {pivot['higher_prices']}/{self.CONFIRMATION_CANDLES} nến cao hơn", DEBUG_LOG_FILE)
+                            remaining_pivots.append(pivot)
+                    else:
+                        remaining_pivots.append(pivot)
+                        
+                # Xử lý đáy
                 else:
-                    remaining_pivots.append(pivot)
-                    save_log(f"Chưa đủ nến xác nhận ({pivot['confirmation_candles']}/{self.CONFIRMATION_CANDLES}), giữ lại trong danh sách chờ", DEBUG_LOG_FILE)
-
+                    if current_price < pivot["lowest_price"]:
+                        pivot["lowest_price"] = current_price
+                        pivot["lowest_time"] = current_time
+                        pivot["confirmation_candles"] = 0
+                        pivot["higher_prices"] = 0
+                    else:
+                        pivot["higher_prices"] += 1
+                        
+                    # Kiểm tra xác nhận - cần 3 nến cao hơn
+                    if pivot["confirmation_candles"] >= 3:
+                        if pivot["higher_prices"] >= 3:
+                            confirmed_pivot = {
+                                "time": pivot["lowest_time"],
+                                "price": pivot["lowest_price"],
+                                "type": pivot["type"]
+                            }
+                            confirmed_pivots.append(confirmed_pivot)
+                            save_log(f"✅ Xác nhận pivot đáy: {pivot['type']} tại ${pivot['lowest_price']:,.2f}", DEBUG_LOG_FILE)
+                        else:
+                            remaining_pivots.append(pivot)
+                    else:
+                        remaining_pivots.append(pivot)
+            
             self.pending_pivots = remaining_pivots
             return confirmed_pivots
-
+            
         except Exception as e:
             save_log(f"Lỗi khi xác nhận pending pivots: {str(e)}", DEBUG_LOG_FILE)
             return []
