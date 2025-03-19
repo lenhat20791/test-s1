@@ -79,24 +79,27 @@ class S1HistoricalTester:
     def save_test_results(self, df, results):
         """Lưu kết quả test vào Excel và vẽ biểu đồ"""
         try:
-            # Thêm cột pivot_type và pattern vào DataFrame
+            # Thêm cột pivot_type vào DataFrame
             df['pivot_type'] = ''
-            df['pattern'] = ''
+            df['trend'] = ''
             
-            # Đánh dấu các pivot và pattern
+            # Đánh dấu các pivot đã xác nhận và xu hướng
             for idx, row in df.iterrows():
                 # Tìm pivot tại thời điểm này
                 pivot = next((p for p in results if p['time'] == row['time']), None)
                 if pivot:
                     df.at[idx, 'pivot_type'] = pivot['type']
-                    # Kiểm tra pattern
-                    has_pattern, pattern_name = pivot_data.check_pattern()
-                    if has_pattern:
-                        df.at[idx, 'pattern'] = pattern_name
-                
-                # Xác định xu hướng
-                if last_pivot_price:
-                    df.at[idx, 'trend'] = 'Uptrend' if row['price'] > last_pivot_price else 'Downtrend'
+                    
+                    # Cập nhật xu hướng dựa trên pivot gần nhất
+                    pivot_idx = results.index(pivot)
+                    if pivot_idx > 0:
+                        prev_pivot = results[pivot_idx - 1]
+                        df.at[idx, 'trend'] = 'Uptrend' if pivot['price'] > prev_pivot['price'] else 'Downtrend'
+                else:
+                    # Nếu không phải pivot point, lấy xu hướng từ pivot gần nhất
+                    last_pivot = next((p for p in reversed(results) if datetime.strptime(p['time'], '%H:%M') < datetime.strptime(row['time'], '%H:%M')), None)
+                    if last_pivot:
+                        df.at[idx, 'trend'] = 'Uptrend' if row['price'] > last_pivot['price'] else 'Downtrend'
             
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
                 # Sheet chính
@@ -124,8 +127,21 @@ class S1HistoricalTester:
                 chart.add_series({
                     'name': 'Price',
                     'categories': f"='TestData'!$B$2:$B${len(df) + 1}",
-                    'values': f"='TestData'!$E$2:$E${len(df) + 1}"
+                    'values': f"='TestData'!$E$2:$E${len(df) + 1}",
+                    'line': {'color': 'blue'},
+                    'marker': {'type': 'circle', 'size': 3}
                 })
+                
+                # Thêm series cho các pivot
+                pivot_points = df[df['pivot_type'].notna()]
+                if not pivot_points.empty:
+                    chart.add_series({
+                        'name': 'Pivots',
+                        'categories': f"='TestData'!$B${pivot_points.index[0]+2}:$B${pivot_points.index[-1]+2}",
+                        'values': f"='TestData'!$E${pivot_points.index[0]+2}:$E${pivot_points.index[-1]+2}",
+                        'line': {'none': True},
+                        'marker': {'type': 'diamond', 'size': 8, 'color': 'red'}
+                    })
                 
                 # Định dạng biểu đồ
                 chart.set_title({'name': 'Price and Pivots - Test Results'})
@@ -138,11 +154,19 @@ class S1HistoricalTester:
                 
                 # Thêm thống kê
                 stats_row = len(df) + 5
-                worksheet.write(stats_row, 0, "Thống kê:")
+                stats_format = workbook.add_format({'bold': True})
+                worksheet.write(stats_row, 0, "Thống kê:", stats_format)
                 worksheet.write(stats_row + 1, 0, "Tổng số nến:")
                 worksheet.write(stats_row + 1, 1, len(df))
                 worksheet.write(stats_row + 2, 0, "Pivot đã xác nhận:")
-                worksheet.write(stats_row + 2, 1, len(pivot_data.get_all_pivots()))
+                worksheet.write(stats_row + 2, 1, len(results))
+                
+                # Thêm thống kê về các loại pivot
+                pivot_types = pd.Series([p['type'] for p in results]).value_counts()
+                worksheet.write(stats_row + 3, 0, "\nPhân bố pivot:", stats_format)
+                for i, (pivot_type, count) in enumerate(pivot_types.items()):
+                    worksheet.write(stats_row + 4 + i, 0, f"{pivot_type}:")
+                    worksheet.write(stats_row + 4 + i, 1, count)
 
             self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx", "SUCCESS")
             return True
