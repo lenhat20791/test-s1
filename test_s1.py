@@ -52,21 +52,18 @@ class S1HistoricalTester:
         """Lấy thông tin về trạng thái pivot hiện tại"""
         status_info = []
         
-        # Lấy thông tin high/low gần nhất
-        last_high = pivot_data.get_last_high() if hasattr(pivot_data, 'get_last_high') else None
-        last_low = pivot_data.get_last_low() if hasattr(pivot_data, 'get_last_low') else None
+        # Lấy các pivot gần nhất
+        recent_pivots = pivot_data.get_recent_pivots(4)  # Lấy 4 pivot gần nhất cho pattern
         
-        if last_high:
-            status_info.append(f"Last High: ${last_high['price']:,.2f} tại {last_high['time']}")
-        if last_low:
-            status_info.append(f"Last Low: ${last_low['price']:,.2f} tại {last_low['time']}")
-        
-        # Lấy thông tin pivot tiềm năng
-        potential_pivots = pivot_data.get_potential_pivots() if hasattr(pivot_data, 'get_potential_pivots') else []
-        if potential_pivots:
-            status_info.append("\nĐiểm đang theo dõi:")
-            for p in potential_pivots:
-                status_info.append(f"- {p['type']} tại ${p['price']:,.2f} ({p['time']}) - Xác nhận: {p['confirmation_count']}/3")
+        if recent_pivots:
+            status_info.append("\nPivot gần nhất:")
+            for pivot in recent_pivots:
+                status_info.append(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
+            
+            # Kiểm tra pattern
+            has_pattern, pattern_name = pivot_data.check_pattern()
+            if has_pattern:
+                status_info.append(f"\nPattern hiện tại: {pattern_name}")
         
         return status_info
 
@@ -82,18 +79,20 @@ class S1HistoricalTester:
     def save_test_results(self, df, results):
         """Lưu kết quả test vào Excel và vẽ biểu đồ"""
         try:
-            # Thêm cột pivot_type vào DataFrame
+            # Thêm cột pivot_type và pattern vào DataFrame
             df['pivot_type'] = ''
-            df['trend'] = ''
+            df['pattern'] = ''
             
-            # Đánh dấu các pivot đã xác nhận
-            last_pivot_price = None
+            # Đánh dấu các pivot và pattern
             for idx, row in df.iterrows():
                 # Tìm pivot tại thời điểm này
-                pivot = next((p for p in pivot_data.get_all_pivots() if p['time'] == row['time']), None)
+                pivot = next((p for p in results if p['time'] == row['time']), None)
                 if pivot:
                     df.at[idx, 'pivot_type'] = pivot['type']
-                    last_pivot_price = pivot['price']
+                    # Kiểm tra pattern
+                    has_pattern, pattern_name = pivot_data.check_pattern()
+                    if has_pattern:
+                        df.at[idx, 'pattern'] = pattern_name
                 
                 # Xác định xu hướng
                 if last_pivot_price:
@@ -208,12 +207,12 @@ class S1HistoricalTester:
             
             # Reset trạng thái và thêm pivots đã biết
             pivot_data.clear_all()
-            
+
             initial_pivots = [
                 {"time": "06:00", "type": "LL", "price": 81931},
                 {"time": "11:00", "type": "LH", "price": 83843}
             ]
-            
+
             for pivot in initial_pivots:
                 if pivot_data.add_user_pivot(pivot["type"], pivot["price"], pivot["time"]):
                     self.log_message(f"✅ Đã thêm user pivot: {pivot['type']} tại ${pivot['price']} ({pivot['time']})", "SUCCESS")
@@ -242,13 +241,22 @@ class S1HistoricalTester:
                 pivot_data.add_price_data(price_data)
                 
                 # Kiểm tra pivot
-                high_pivot = pivot_data.detect_pivot(row['high'], 'high')
-                low_pivot = pivot_data.detect_pivot(row['low'], 'low')
-                
+                if row['high'] > row['low']:  # Kiểm tra high trước low
+                    high_pivot = pivot_data.detect_pivot(row['high'], 'high')
+                    low_pivot = pivot_data.detect_pivot(row['low'], 'low')
+                else:  # Kiểm tra low trước high
+                    low_pivot = pivot_data.detect_pivot(row['low'], 'low')
+                    high_pivot = pivot_data.detect_pivot(row['high'], 'high')
+
                 if high_pivot:
-                    self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${high_pivot['price']:,.2f})", "SUCCESS")
+                    self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${row['high']:,.2f})", "SUCCESS")
                 if low_pivot:
-                    self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${low_pivot['price']:,.2f})", "SUCCESS")
+                    self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${row['low']:,.2f})", "SUCCESS")
+
+                # Kiểm tra pattern sau mỗi pivot mới
+                has_pattern, pattern_name = pivot_data.check_pattern()
+                if has_pattern:
+                    self.log_message(f"🎯 Phát hiện pattern: {pattern_name}", "PATTERN")
                 
                 # Log trạng thái pivot
                 status_info = self.get_pivot_status()
@@ -286,7 +294,31 @@ class S1HistoricalTester:
             error_msg = f"❌ Lỗi khi chạy test: {str(e)}"
             self.log_message(error_msg, "ERROR")
             return None
-
+            
+    def validate_pivot_sequence(self, pivot1, pivot2):
+        """Kiểm tra tính hợp lệ của chuỗi pivot"""
+        try:
+            # HH phải cao hơn pivot trước
+            if pivot2['type'] == 'HH' and pivot2['price'] <= pivot1['price']:
+                return False
+                
+            # LL phải thấp hơn pivot trước
+            if pivot2['type'] == 'LL' and pivot2['price'] >= pivot1['price']:
+                return False
+                
+            # LH phải thấp hơn HH trước
+            if pivot2['type'] == 'LH' and pivot1['type'] == 'HH' and pivot2['price'] >= pivot1['price']:
+                return False
+                
+            # HL phải cao hơn LL trước
+            if pivot2['type'] == 'HL' and pivot1['type'] == 'LL' and pivot2['price'] <= pivot1['price']:
+                return False
+                
+            return True
+            
+        except Exception as e:
+            self.log_message(f"Lỗi khi validate pivot: {str(e)}", "ERROR")
+            return False
 # Entry point
 if __name__ == "__main__":
     tester = S1HistoricalTester()
