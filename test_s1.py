@@ -67,17 +67,11 @@ class S1HistoricalTester:
         try:
             # Thêm cột pivot_type và pending_status vào DataFrame
             df['pivot_type'] = ''
-            df['pending_status'] = ''
             
             # Đánh dấu các pivot đã xác nhận
             for pivot in pivot_data.get_all_pivots():
                 mask = (df['time'] == pivot['time'])
                 df.loc[mask, 'pivot_type'] = pivot['type']
-            
-            # Đánh dấu các pending pivots
-            for pivot in pivot_data.pending_pivots:
-                mask = (df['time'] == pivot['time'])
-                df.loc[mask, 'pending_status'] = f"Pending {pivot['type']} ({pivot['confirmation_candles']}/3)"
             
             # Tạo DataFrame cho confirmed pivots và loại bỏ trùng lặp
             confirmed_data = []
@@ -174,7 +168,6 @@ class S1HistoricalTester:
             return False
 
     def analyze_pivot_points(self, df, time_str):
-        """Phân tích chi tiết tại thời điểm cụ thể"""
         try:
             row_idx = df[df['time'] == time_str].index[0]
             row = df.iloc[row_idx]
@@ -185,48 +178,20 @@ class S1HistoricalTester:
             self.log_message(f"Low: ${row['low']:,.2f}")
             self.log_message(f"Close: ${row['price']:,.2f}")
             
-            # Lấy 3 nến trước đó để phân tích xác nhận
-            if row_idx >= 3:
-                self.log_message(f"\n3 nến trước (cho xác nhận):")
-                for i in range(3):
-                    prev = df.iloc[row_idx-i-1]
-                    self.log_message(f"{prev['time']}:")
-                    self.log_message(f"High: ${prev['high']:,.2f}")
-                    self.log_message(f"Low: ${prev['low']:,.2f}")
-                    self.log_message(f"Close: ${prev['price']:,.2f}")
-            
-            # Phân tích pending pivots
-            if pivot_data.pending_pivots:
-                self.log_message("\nPending Pivots hiện tại:")
-                for p in pivot_data.pending_pivots:
-                    self.log_message(f"- Type: {p['type']}")
-                    self.log_message(f"  Giá ban đầu: ${p['price']:,.2f}")
-                    self.log_message(f"  Thời gian: {p['time']}")
-                    self.log_message(f"  Xác nhận: {p['confirmation_candles']}/3")
-                    
-                    if p['type'] in ["H", "HH", "LH"]:
-                        self.log_message(f"  Giá cao nhất: ${p['highest_price']:,.2f}")
-                        self.log_message(f"  Tại: {p['highest_time']}")
-                        self.log_message(f"  Số nến thấp hơn: {p['lower_prices']}")
-                    else:
-                        self.log_message(f"  Giá thấp nhất: ${p['lowest_price']:,.2f}")
-                        self.log_message(f"  Tại: {p['lowest_time']}")
-                        self.log_message(f"  Số nến cao hơn: {p['higher_prices']}")
-            
             # Kiểm tra điều kiện pivot
             all_pivots = pivot_data.get_all_pivots()
             if all_pivots:
                 last_pivot = all_pivots[-1]
                 last_time = datetime.strptime(last_pivot["time"], "%H:%M")
                 current_time = datetime.strptime(row['time'], "%H:%M")
-                time_diff = (current_time - last_time).total_seconds() / 1800  # Chuyển sang số nến 30m
+                time_diff = (current_time - last_time).total_seconds() / 1800
                 price_change = abs(row['price'] - last_pivot["price"]) / last_pivot["price"]
                 
                 self.log_message(f"\nSo sánh với pivot trước:")
                 self.log_message(f"- Pivot trước: {last_pivot['type']} tại ${last_pivot['price']:,.2f} ({last_pivot['time']})")
                 self.log_message(f"- Khoảng cách: {time_diff:.1f} nến")
                 self.log_message(f"- Biên độ giá: {price_change:.2%}")
-                
+                    
         except Exception as e:
             self.log_message(f"❌ Lỗi khi phân tích pivot point: {str(e)}")
 
@@ -400,73 +365,102 @@ class S1HistoricalTester:
             # Dữ liệu test theo thời gian tăng dần
             test_data = [
                 # Test case 1: Xác nhận LL
-                {"time": "09:00", "price": 82000, "high": 82000, "low": 81800},  # Giá thấp tiềm năng
+                {"time": "09:00", "price": 82000, "high": 82000, "low": 81800},  # Nến thấp tiềm năng
                 {"time": "09:30", "price": 82200, "high": 82300, "low": 82000},  # Nến cao hơn 1
                 {"time": "10:00", "price": 82300, "high": 82400, "low": 82100},  # Nến cao hơn 2
-                {"time": "10:30", "price": 82400, "high": 82500, "low": 82200},  # Nến cao hơn 3 -> Xác nhận LL
+                {"time": "10:30", "price": 82400, "high": 82500, "low": 82200},  # Nến cao hơn 3
                 
                 # Test case 2: Xác nhận HH sau LL
-                {"time": "11:00", "price": 83000, "high": 83100, "low": 82800},  # Giá cao tiềm năng
+                {"time": "11:00", "price": 83000, "high": 83100, "low": 82800},  # Nến cao tiềm năng
                 {"time": "11:30", "price": 82800, "high": 82900, "low": 82700},  # Nến thấp hơn 1
                 {"time": "12:00", "price": 82700, "high": 82800, "low": 82600},  # Nến thấp hơn 2
-                {"time": "12:30", "price": 82600, "high": 82700, "low": 82500},  # Nến thấp hơn 3 -> Xác nhận HH
+                {"time": "12:30", "price": 82600, "high": 82700, "low": 82500},  # Nến thấp hơn 3
                 
                 # Test case 3: Xác nhận LH 
-                {"time": "13:00", "price": 82500, "high": 82600, "low": 82400},  # Giá thấp tiềm năng (phải thấp hơn HH)
-                {"time": "13:30", "price": 82300, "high": 82400, "low": 82200},  # Nến thấp hơn tiếp
-                {"time": "14:00", "price": 82700, "high": 82800, "low": 82600},  # Nến cao hơn 1
-                {"time": "14:30", "price": 82800, "high": 82900, "low": 82700},  # Nến cao hơn 2
-                {"time": "15:00", "price": 82900, "high": 83000, "low": 82800},  # Nến cao hơn 3 -> Xác nhận LH
+                {"time": "13:00", "price": 82500, "high": 82600, "low": 82400},  # Nến cao tiềm năng
+                {"time": "13:30", "price": 82700, "high": 82800, "low": 82600},  # Nến cao hơn 1
+                {"time": "14:00", "price": 82900, "high": 83000, "low": 82800},  # Nến cao hơn 2
+                {"time": "14:30", "price": 83100, "high": 83200, "low": 83000},  # Nến cao hơn 3
                 
                 # Test case 4: Xác nhận HL
-                {"time": "15:30", "price": 82400, "high": 82500, "low": 82300},  # Giá cao tiềm năng (phải cao hơn LL)
-                {"time": "16:00", "price": 82200, "high": 82300, "low": 82100},  # Nến thấp hơn 1
-                {"time": "16:30", "price": 82100, "high": 82200, "low": 82000},  # Nến thấp hơn 2
-                {"time": "16:30", "price": 82000, "high": 82100, "low": 81900},  # Nến thấp hơn 3 -> Xác nhận HL
+                {"time": "15:00", "price": 82400, "high": 82500, "low": 82300},  # Nến thấp tiềm năng
+                {"time": "15:30", "price": 82200, "high": 82300, "low": 82100},  # Nến thấp hơn 1
+                {"time": "16:00", "price": 82100, "high": 82200, "low": 82000},  # Nến thấp hơn 2
+                {"time": "16:30", "price": 82000, "high": 82100, "low": 81900},  # Nến thấp hơn 3
             ]
 
             self.log_message("\n=== Bắt đầu test quy tắc pivot ===")
+            self.log_message(f"Thời gian hiện tại: {pivot_data.current_time}")
+            self.log_message(f"User: {pivot_data.current_user}")
+            self.log_message("="*50)
             
             for data in test_data:
                 # Xử lý dữ liệu giá
                 pivot_data.add_price_data(data)
                 
                 # Kiểm tra pivot tại high và low
-                high_pivot = pivot_data.detect_pivot(data["high"], "H")
-                low_pivot = pivot_data.detect_pivot(data["low"], "L")
+                high_pivot = pivot_data.detect_pivot(data["high"], "high")
+                low_pivot = pivot_data.detect_pivot(data["low"], "low")
                 
                 # Log kết quả kiểm tra
-                self.log_message(f"\nThời gian: {data['time']}")
-                self.log_message(f"Giá: ${data['price']:,.2f}")
-                self.log_message(f"High: ${data['high']:,.2f} -> {high_pivot if high_pivot else 'No pivot'}")
-                self.log_message(f"Low: ${data['low']:,.2f} -> {low_pivot if low_pivot else 'No pivot'}")
-                
-                # Log chi tiết các pending pivot
-                if pivot_data.pending_pivots:
-                    self.log_message("\nPending pivots:")
-                    for p in pivot_data.pending_pivots:
-                        self.log_message(f"- {p['type']} tại ${p['price']:,.2f}")
-                        self.log_message(f"  Xác nhận: {p['confirmation_candles']}/3")
-                        if p['type'] in ["HH", "LH"]:
-                            self.log_message(f"  Số nến thấp hơn: {p.get('lower_prices', 0)}/{self.MIN_LOWER_CANDLES}")
-                        else:
-                            self.log_message(f"  Số nến cao hơn: {p.get('higher_prices', 0)}/{self.MIN_HIGHER_CANDLES}")
+                self.log_message(f"\n=== Phân tích tại {data['time']} ===")
+                self.log_message("📊 Dữ liệu giá:")
+                self.log_message(f"  - Giá đóng cửa: ${data['price']:,.2f}")
+                self.log_message(f"  - Giá cao nhất:  ${data['high']:,.2f}")
+                self.log_message(f"  - Giá thấp nhất: ${data['low']:,.2f}")
+
+                # Log kết quả kiểm tra pivot
+                self.log_message("\n🔍 Kết quả kiểm tra pivot:")
+                self.log_message(f"  - High: ${data['high']:,.2f} → {high_pivot if high_pivot else '❌ Không phải pivot'}")
+                self.log_message(f"  - Low:  ${data['low']:,.2f} → {low_pivot if low_pivot else '❌ Không phải pivot'}")
+
+                # Log danh sách pivot đã xác nhận
+                confirmed_pivots = pivot_data.get_all_pivots()
+                if confirmed_pivots:
+                    self.log_message("\n✅ Pivot đã xác nhận:")
+                    for pivot in confirmed_pivots:
+                        # Thêm màu sắc cho các loại pivot khác nhau
+                        pivot_symbol = {
+                            'HH': '🟢',  # Xanh lá
+                            'LL': '🔴',  # Đỏ
+                            'LH': '🔵',  # Xanh dương
+                            'HL': '🟡'   # Vàng
+                        }.get(pivot['type'], '⚪')  # Mặc định trắng
+                        
+                        # Tính % thay đổi so với giá hiện tại
+                        price_change = ((data['price'] - pivot['price']) / pivot['price']) * 100
+                        
+                        self.log_message(f"  {pivot_symbol} {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']}) | {price_change:+.2f}% so với giá hiện tại")
+
+                    # Thêm thống kê
+                    self.log_message(f"\n📈 Tổng số pivot đã xác nhận: {len(confirmed_pivots)}")
+                else:
+                    self.log_message("\nℹ️ Chưa có pivot nào được xác nhận")
+
+                self.log_message("="*50)
 
             # Kiểm tra kết quả cuối cùng
             confirmed_pivots = pivot_data.get_all_pivots()
-            self.log_message("\n=== Kết quả test ===")
+            self.log_message("\n=== Tổng kết kết quả test ===")
             self.log_message(f"Số pivot đã xác nhận: {len(confirmed_pivots)}")
+            
+            if confirmed_pivots:
+                self.log_message("\nDanh sách pivot theo thứ tự thời gian:")
+                for pivot in confirmed_pivots:
+                    self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
             
             # Kiểm tra thứ tự các pivot đã xác nhận
             expected_sequence = ["LL", "HH", "LH", "HL"]
             actual_sequence = [p["type"] for p in confirmed_pivots]
             
             if actual_sequence == expected_sequence:
-                self.log_message("✅ Test thành công: Thứ tự pivot đúng")
+                self.log_message("\n✅ Test thành công: Thứ tự pivot đúng")
+                self.log_message(f"Chuỗi pivot mong đợi: {' → '.join(expected_sequence)}")
+                self.log_message(f"Chuỗi pivot thực tế:  {' → '.join(actual_sequence)}")
             else:
-                self.log_message("❌ Test thất bại: Thứ tự pivot sai")
-                self.log_message(f"Mong đợi: {expected_sequence}")
-                self.log_message(f"Thực tế: {actual_sequence}")
+                self.log_message("\n❌ Test thất bại: Thứ tự pivot không đúng")
+                self.log_message(f"Chuỗi pivot mong đợi: {' → '.join(expected_sequence)}")
+                self.log_message(f"Chuỗi pivot thực tế:  {' → '.join(actual_sequence)}")
                 
             return True
 
@@ -475,8 +469,15 @@ class S1HistoricalTester:
             return False
     
 def test_current_time_and_user():
-    assert get_current_time() == "2025-03-18 05:32:37"
-    assert get_current_user() == "lenhat20791"
+    """Test chuyển đổi múi giờ và user"""
+    utc_time = "2025-03-19 01:58:19"
+    test_user = "lenhat20791"
+    
+    set_current_time_and_user(utc_time, test_user)
+    
+    # Kiểm tra chuyển đổi múi giờ
+    assert "GMT+7" in pivot_data.current_time
+    assert pivot_data.current_user == test_user
     
     def test_time_format():
         current_time = "2025-03-18 05:26:50"
@@ -757,7 +758,6 @@ def test_current_time_and_user():
             self.log_message("\n=== Tổng kết kết quả ===")
             self.log_message(f"Tổng số nến: {len(df)}")
             self.log_message(f"Tổng số pivot đã xác nhận: {len(results)}")
-            self.log_message(f"Số pivot đang chờ xác nhận: {len(pivot_data.pending_pivots)}")
             
             if results:
                 self.log_message("\nDanh sách pivot đã xác nhận:")
