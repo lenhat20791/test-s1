@@ -157,8 +157,7 @@ class S1HistoricalTester:
                 worksheet.write(stats_row + 1, 1, len(pivot_data.get_all_pivots()))
                 worksheet.write(stats_row + 2, 0, "Pivot đã xác nhận:")
                 worksheet.write(stats_row + 2, 1, len(pivot_data.confirmed_pivots))
-                worksheet.write(stats_row + 3, 0, "Pivot đang chờ xác nhận:")
-                worksheet.write(stats_row + 3, 1, len(pivot_data.pending_pivots))
+
 
             self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx")
             return True
@@ -321,7 +320,7 @@ class S1HistoricalTester:
             self.log_message("\n=== Tổng kết kết quả ===")
             self.log_message(f"Tổng số nến: {len(df)}")
             self.log_message(f"Tổng số pivot đã xác nhận: {len(results)}")
-            self.log_message(f"Số pivot đang chờ xác nhận: {len(pivot_data.pending_pivots)}")
+            
             
             if results:
                 self.log_message("\nDanh sách pivot đã xác nhận:")
@@ -329,10 +328,7 @@ class S1HistoricalTester:
                     self.log_message(f"\nThời gian: {pivot['time']}")
                     self.log_message(f"Loại: {pivot['type']}")
                     self.log_message(f"Giá: ${pivot['price']:,.2f}")
-            
-            if pivot_data.pending_pivots:
-                self.log_message("\nDanh sách pivot đang chờ xác nhận:")
-                for pivot in pivot_data.pending_pivots:
+
                     self.log_message(f"\nThời gian: {pivot['time']}")
                     self.log_message(f"Loại: {pivot['type']}")
                     self.log_message(f"Giá ban đầu: ${pivot['price']:,.2f}")
@@ -519,17 +515,11 @@ def test_current_time_and_user():
         try:
             # Thêm cột pivot_type và pending_status vào DataFrame
             df['pivot_type'] = ''
-            df['pending_status'] = ''
-            
+
             # Đánh dấu các pivot đã xác nhận
             for pivot in pivot_data.get_all_pivots():
                 mask = (df['time'] == pivot['time'])
                 df.loc[mask, 'pivot_type'] = pivot['type']
-            
-            # Đánh dấu các pending pivots
-            for pivot in pivot_data.pending_pivots:
-                mask = (df['time'] == pivot['time'])
-                df.loc[mask, 'pending_status'] = f"Pending {pivot['type']} ({pivot['confirmation_candles']}/3)"
             
             # Lưu vào Excel
             writer = pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter')
@@ -704,22 +694,20 @@ def test_current_time_and_user():
                     'low': row['low']
                 }
                 
-                # Log số pending pivots hiện tại
-                self.log_message(f"\nSố pending pivots: {len(pivot_data.pending_pivots)}")
-                
-                # Log chi tiết pending pivots
-                if pivot_data.pending_pivots:
-                    self.log_message("Chi tiết pending pivots:")
-                    for p in pivot_data.pending_pivots:
-                        self.log_message(f"- Type: {p['type']}, Price: ${p['price']:,.2f}, Confirmations: {p['confirmation_candles']}/3")
-                        if p['type'] in ["H", "HH", "LH"]:
-                            self.log_message(f"  Giá cao nhất: ${p['highest_price']:,.2f}")
-                            self.log_message(f"  Thời gian cao nhất: {p['highest_time']}")
-                            self.log_message(f"  Số nến thấp hơn: {p['lower_prices']}")
-                        else:
-                            self.log_message(f"  Giá thấp nhất: ${p['lowest_price']:,.2f}")
-                            self.log_message(f"  Thời gian thấp nhất: {p['lowest_time']}")
-                            self.log_message(f"  Số nến cao hơn: {p['higher_prices']}")
+                # Log trạng thái hiện tại
+                confirmed_pivots = pivot_data.get_all_pivots()
+                if confirmed_pivots:
+                    self.log_message("\n✅ Pivot đã xác nhận:")
+                    for pivot in confirmed_pivots:
+                        # Thêm màu sắc cho các loại pivot khác nhau
+                        pivot_symbol = {
+                            'HH': '🟢',  # Xanh lá
+                            'LL': '🔴',  # Đỏ
+                            'LH': '🔵',  # Xanh dương
+                            'HL': '🟡'   # Vàng
+                        }.get(pivot['type'], '⚪')  # Mặc định trắng
+                        
+                        self.log_message(f"  {pivot_symbol} {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
                 
                 # Phân tích chi tiết tại các thời điểm quan trọng
                 if row['time'] in important_times:
