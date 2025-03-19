@@ -10,7 +10,7 @@ from pathlib import Path
 from s1 import pivot_data, detect_pivot, save_log, set_current_time_and_user
 
 # Chuyển đổi UTC sang múi giờ Việt Nam
-utc_time = "2025-03-19 03:03:04"  # UTC time
+utc_time = "2025-03-19 08:01:00"   # UTC time
 utc = pytz.UTC
 vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
 
@@ -31,7 +31,16 @@ class S1HistoricalTester:
         self.client = Client()
         self.debug_log_file = DEBUG_LOG_FILE
         self.user_login = user_login
+        self.symbol = "BTCUSDT"           # Thêm symbol
+        self.interval = "30m"             # Thêm interval
         self.clear_log_file()
+        
+        # Test kết nối
+        self.client.ping()
+        self.log_message("✅ Kết nối Binance thành công", "SUCCESS")
+    except Exception as e:
+        self.log_message(f"❌ Lỗi kết nối Binance: {str(e)}", "ERROR")
+        raise
         
     def clear_log_file(self):
         """Xóa nội dung của file log để bắt đầu test mới"""
@@ -179,16 +188,18 @@ class S1HistoricalTester:
             end_time = datetime(2025, 3, 19, 0, 0, 0)    # 00:00 19/03/2025
             
             self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
+            self.log_message(f"Symbol: {self.symbol}")
+            self.log_message(f"Interval: {self.interval}")
             self.log_message(f"User: {self.user_login}")
-            self.log_message(f"Thời gian bắt đầu: {start_time}")
-            self.log_message(f"Thời gian kết thúc: {end_time}")
-            
+            self.log_message(f"Thời gian bắt đầu: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            self.log_message(f"Thời gian kết thúc: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                
             # Lấy dữ liệu từ Binance
             klines = self.client.get_historical_klines(
                 "BTCUSDT",
                 Client.KLINE_INTERVAL_30MINUTE,
                 start_str=int(start_time.timestamp() * 1000),
-                end_str=int(current_time.timestamp() * 1000)
+                end_str=int(end_time.timestamp() * 1000)
             )
             
             if not klines:
@@ -227,9 +238,7 @@ class S1HistoricalTester:
             
             # Reset trạng thái và thêm pivots đã biết
             pivot_data.clear_all()
-
-            
-            
+   
             # Chạy test
             self.log_message("\nBắt đầu phát hiện pivot...", "INFO")
             results = []
