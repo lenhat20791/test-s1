@@ -9,7 +9,7 @@ from pathlib import Path
 from s1 import pivot_data, detect_pivot, save_log, set_current_time_and_user
 
 # Chuyển đổi UTC sang múi giờ Việt Nam
-utc_time = "2025-03-19 02:49:51"  # UTC time
+utc_time = "2025-03-19 03:03:04"  # UTC time
 utc = pytz.UTC
 vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
 
@@ -40,37 +40,65 @@ class S1HistoricalTester:
         except Exception as e:
             print(f"Error clearing log file: {str(e)}")
 
-    def log_message(self, message):
-        """Ghi log ra console và file"""
-        print(message)
+    def log_message(self, message, level="INFO"):
+        """Ghi log ra console và file với level"""
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        formatted_message = f"[{timestamp}] [{level}] {message}"
+        print(formatted_message)
         with open(self.debug_log_file, "a", encoding="utf-8") as f:
-            f.write(f"{message}\n")
+            f.write(f"{formatted_message}\n")
+
+    def get_pivot_status(self):
+        """Lấy thông tin về trạng thái pivot hiện tại"""
+        status_info = []
+        
+        # Lấy thông tin high/low gần nhất
+        last_high = pivot_data.get_last_high() if hasattr(pivot_data, 'get_last_high') else None
+        last_low = pivot_data.get_last_low() if hasattr(pivot_data, 'get_last_low') else None
+        
+        if last_high:
+            status_info.append(f"Last High: ${last_high['price']:,.2f} tại {last_high['time']}")
+        if last_low:
+            status_info.append(f"Last Low: ${last_low['price']:,.2f} tại {last_low['time']}")
+        
+        # Lấy thông tin pivot tiềm năng
+        potential_pivots = pivot_data.get_potential_pivots() if hasattr(pivot_data, 'get_potential_pivots') else []
+        if potential_pivots:
+            status_info.append("\nĐiểm đang theo dõi:")
+            for p in potential_pivots:
+                status_info.append(f"- {p['type']} tại ${p['price']:,.2f} ({p['time']}) - Xác nhận: {p['confirmation_count']}/3")
+        
+        return status_info
+
+    def analyze_price_action(self, current_price, last_pivot):
+        """Phân tích price action"""
+        if not last_pivot:
+            return "Chưa có pivot để xác định xu hướng"
+            
+        price_diff = current_price - last_pivot['price']
+        trend = "Uptrend" if price_diff > 0 else "Downtrend" if price_diff < 0 else "Sideway"
+        return f"Xu hướng: {trend} (${abs(price_diff):,.2f} từ pivot cuối)"
 
     def save_test_results(self, df, results):
         """Lưu kết quả test vào Excel và vẽ biểu đồ"""
         try:
             # Thêm cột pivot_type vào DataFrame
             df['pivot_type'] = ''
+            df['trend'] = ''
             
             # Đánh dấu các pivot đã xác nhận
-            for pivot in pivot_data.get_all_pivots():
-                mask = (df['time'] == pivot['time'])
-                df.loc[mask, 'pivot_type'] = pivot['type']
+            last_pivot_price = None
+            for idx, row in df.iterrows():
+                # Tìm pivot tại thời điểm này
+                pivot = next((p for p in pivot_data.get_all_pivots() if p['time'] == row['time']), None)
+                if pivot:
+                    df.at[idx, 'pivot_type'] = pivot['type']
+                    last_pivot_price = pivot['price']
+                
+                # Xác định xu hướng
+                if last_pivot_price:
+                    df.at[idx, 'trend'] = 'Uptrend' if row['price'] > last_pivot_price else 'Downtrend'
             
-            # Tạo DataFrame cho confirmed pivots
-            confirmed_data = []
-            seen_pivots = set()
-
-            for pivot in pivot_data.get_all_pivots():
-                pivot_key = (pivot['time'], pivot['type'], pivot['price'])
-                if pivot_key not in seen_pivots:
-                    confirmed_data.append({
-                        'Time': pivot['time'],
-                        'Type': pivot['type'],
-                        'Price': pivot['price']
-                    })
-                    seen_pivots.add(pivot_key)
-
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
                 # Sheet chính
                 df.to_excel(writer, sheet_name='TestData', index=False)
@@ -83,10 +111,14 @@ class S1HistoricalTester:
                     'bold': True,
                     'font_color': 'red'
                 })
+                trend_format = workbook.add_format({
+                    'bold': True
+                })
                 
                 # Áp dụng định dạng
                 worksheet.set_column('C:E', 12, price_format)
                 worksheet.set_column('F:F', 15, pivot_format)
+                worksheet.set_column('G:G', 15, trend_format)
                 
                 # Tạo biểu đồ
                 chart = workbook.add_chart({'type': 'line'})
@@ -108,16 +140,16 @@ class S1HistoricalTester:
                 # Thêm thống kê
                 stats_row = len(df) + 5
                 worksheet.write(stats_row, 0, "Thống kê:")
-                worksheet.write(stats_row + 1, 0, "Tổng số pivot:")
-                worksheet.write(stats_row + 1, 1, len(pivot_data.get_all_pivots()))
+                worksheet.write(stats_row + 1, 0, "Tổng số nến:")
+                worksheet.write(stats_row + 1, 1, len(df))
                 worksheet.write(stats_row + 2, 0, "Pivot đã xác nhận:")
                 worksheet.write(stats_row + 2, 1, len(pivot_data.get_all_pivots()))
 
-            self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx")
+            self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx", "SUCCESS")
             return True
             
         except Exception as e:
-            self.log_message(f"❌ Lỗi khi lưu Excel: {str(e)}")
+            self.log_message(f"Lỗi khi lưu Excel: {str(e)}", "ERROR")
             return False
 
     def run_test(self):
@@ -127,7 +159,7 @@ class S1HistoricalTester:
             current_time = datetime(2025, 3, 18, 3, 52, 11)
             start_time = datetime(2025, 3, 17, 0, 0, 0)
             
-            self.log_message(f"\n=== Bắt đầu test S1 ===")
+            self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
             self.log_message(f"User: {self.user_login}")
             self.log_message(f"Thời gian bắt đầu: {start_time}")
             self.log_message(f"Thời gian kết thúc: {current_time}")
@@ -141,7 +173,7 @@ class S1HistoricalTester:
             )
             
             if not klines:
-                self.log_message("Không tìm thấy dữ liệu cho khoảng thời gian này")
+                self.log_message("Không tìm thấy dữ liệu cho khoảng thời gian này", "ERROR")
                 return
             
             # Chuyển đổi dữ liệu
@@ -172,7 +204,7 @@ class S1HistoricalTester:
             for col in ['high', 'low', 'price']:
                 df[col] = df[col].astype(float)
             
-            self.log_message(f"\nTổng số nến: {len(df)}")
+            self.log_message(f"\nTổng số nến: {len(df)}", "INFO")
             
             # Reset trạng thái và thêm pivots đã biết
             pivot_data.clear_all()
@@ -184,12 +216,12 @@ class S1HistoricalTester:
             
             for pivot in initial_pivots:
                 if pivot_data.add_user_pivot(pivot["type"], pivot["price"], pivot["time"]):
-                    self.log_message(f"✅ Đã thêm user pivot: {pivot['type']} tại ${pivot['price']} ({pivot['time']})")
+                    self.log_message(f"✅ Đã thêm user pivot: {pivot['type']} tại ${pivot['price']} ({pivot['time']})", "SUCCESS")
                 else:
-                    self.log_message(f"❌ Không thể thêm user pivot: {pivot['type']} tại {pivot['time']}")
+                    self.log_message(f"❌ Không thể thêm user pivot: {pivot['type']} tại {pivot['time']}", "ERROR")
             
             # Chạy test
-            self.log_message("\nBắt đầu phát hiện pivot...")
+            self.log_message("\nBắt đầu phát hiện pivot...", "INFO")
             results = []
             
             for index, row in df.iterrows():
@@ -201,7 +233,7 @@ class S1HistoricalTester:
                 }
 
                 # Log chi tiết cho mỗi nến
-                self.log_message(f"\n=== Phân tích nến {row['time']} ===")
+                self.log_message(f"\n=== Phân tích nến {row['time']} ===", "INFO")
                 self.log_message(f"Giá: ${row['price']:,.2f}")
                 self.log_message(f"High: ${row['high']:,.2f}")
                 self.log_message(f"Low: ${row['low']:,.2f}")
@@ -214,20 +246,29 @@ class S1HistoricalTester:
                 low_pivot = pivot_data.detect_pivot(row['low'], 'low')
                 
                 if high_pivot:
-                    self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${high_pivot['price']:,.2f})")
+                    self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${high_pivot['price']:,.2f})", "SUCCESS")
                 if low_pivot:
-                    self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${low_pivot['price']:,.2f})")
+                    self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${low_pivot['price']:,.2f})", "SUCCESS")
                 
-                # Log kết quả
+                # Log trạng thái pivot
+                status_info = self.get_pivot_status()
+                for info in status_info:
+                    self.log_message(info, "STATUS")
+                
+                # Log xu hướng
                 all_pivots = pivot_data.get_all_pivots()
                 if all_pivots:
                     last_pivot = all_pivots[-1]
-                    for pivot in all_pivots:
-                        if pivot not in results:
-                            results.append(pivot)
+                    trend_info = self.analyze_price_action(row['price'], last_pivot)
+                    self.log_message(trend_info, "TREND")
+                
+                # Cập nhật results
+                for pivot in all_pivots:
+                    if pivot not in results:
+                        results.append(pivot)
             
             # Tổng kết kết quả
-            self.log_message("\n=== Tổng kết kết quả ===")
+            self.log_message("\n=== Tổng kết kết quả ===", "SUMMARY")
             self.log_message(f"Tổng số nến: {len(df)}")
             self.log_message(f"Tổng số pivot đã xác nhận: {len(results)}")
             
@@ -243,7 +284,7 @@ class S1HistoricalTester:
             
         except Exception as e:
             error_msg = f"❌ Lỗi khi chạy test: {str(e)}"
-            self.log_message(error_msg)
+            self.log_message(error_msg, "ERROR")
             return None
 
 # Entry point
