@@ -7,12 +7,19 @@ import pandas as pd
 import pytz
 from pathlib import Path
 from s1 import pivot_data, detect_pivot, save_log, set_current_time_and_user
-# Lấy thời gian hiện tại
-current_time = "2025-03-18 06:06:51"  # Thời gian từ log của bạn
-current_user = "lenhat20791"  # User từ log của bạn
+
+# Chuyển đổi UTC sang múi giờ Việt Nam
+utc_time = "2025-03-18 09:38:38"
+utc = pytz.UTC
+vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+
+# Parse UTC time và chuyển sang múi giờ Việt Nam
+utc_dt = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=utc)
+vietnam_time = utc_dt.astimezone(vietnam_tz)
+current_time = vietnam_time.strftime('%Y-%m-%d %H:%M:%S')
+
+current_user = "lenhat20791"
 DEBUG_LOG_FILE = "debug_historical_test.log"
-
-
 
 print(f"Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {current_time}")
 print(f"Current User's Login: {current_user}")
@@ -383,7 +390,90 @@ class S1HistoricalTester:
             error_msg = f"❌ Lỗi khi chạy test: {str(e)}"
             self.log_message(error_msg)
             return None
+    
+    def test_pivot_rules(self):
+        """Test các quy tắc pivot mới"""
+        try:
+            # Reset trạng thái pivot_data
+            pivot_data.clear_all()
             
+            # Dữ liệu test theo thời gian tăng dần
+            test_data = [
+                # Test case 1: Xác nhận LL
+                {"time": "09:00", "price": 82000, "high": 82000, "low": 81800},  # Giá thấp tiềm năng
+                {"time": "09:30", "price": 82200, "high": 82300, "low": 82000},  # Nến cao hơn 1
+                {"time": "10:00", "price": 82300, "high": 82400, "low": 82100},  # Nến cao hơn 2
+                {"time": "10:30", "price": 82400, "high": 82500, "low": 82200},  # Nến cao hơn 3 -> Xác nhận LL
+                
+                # Test case 2: Xác nhận HH sau LL
+                {"time": "11:00", "price": 83000, "high": 83100, "low": 82800},  # Giá cao tiềm năng
+                {"time": "11:30", "price": 82800, "high": 82900, "low": 82700},  # Nến thấp hơn 1
+                {"time": "12:00", "price": 82700, "high": 82800, "low": 82600},  # Nến thấp hơn 2
+                {"time": "12:30", "price": 82600, "high": 82700, "low": 82500},  # Nến thấp hơn 3 -> Xác nhận HH
+                
+                # Test case 3: Xác nhận LH 
+                {"time": "13:00", "price": 82500, "high": 82600, "low": 82400},  # Giá thấp tiềm năng (phải thấp hơn HH)
+                {"time": "13:30", "price": 82300, "high": 82400, "low": 82200},  # Nến thấp hơn tiếp
+                {"time": "14:00", "price": 82700, "high": 82800, "low": 82600},  # Nến cao hơn 1
+                {"time": "14:30", "price": 82800, "high": 82900, "low": 82700},  # Nến cao hơn 2
+                {"time": "15:00", "price": 82900, "high": 83000, "low": 82800},  # Nến cao hơn 3 -> Xác nhận LH
+                
+                # Test case 4: Xác nhận HL
+                {"time": "15:30", "price": 82400, "high": 82500, "low": 82300},  # Giá cao tiềm năng (phải cao hơn LL)
+                {"time": "16:00", "price": 82200, "high": 82300, "low": 82100},  # Nến thấp hơn 1
+                {"time": "16:30", "price": 82100, "high": 82200, "low": 82000},  # Nến thấp hơn 2
+                {"time": "16:30", "price": 82000, "high": 82100, "low": 81900},  # Nến thấp hơn 3 -> Xác nhận HL
+            ]
+
+            self.log_message("\n=== Bắt đầu test quy tắc pivot ===")
+            
+            for data in test_data:
+                # Xử lý dữ liệu giá
+                pivot_data.add_price_data(data)
+                
+                # Kiểm tra pivot tại high và low
+                high_pivot = pivot_data.detect_pivot(data["high"], "H")
+                low_pivot = pivot_data.detect_pivot(data["low"], "L")
+                
+                # Log kết quả kiểm tra
+                self.log_message(f"\nThời gian: {data['time']}")
+                self.log_message(f"Giá: ${data['price']:,.2f}")
+                self.log_message(f"High: ${data['high']:,.2f} -> {high_pivot if high_pivot else 'No pivot'}")
+                self.log_message(f"Low: ${data['low']:,.2f} -> {low_pivot if low_pivot else 'No pivot'}")
+                
+                # Log chi tiết các pending pivot
+                if pivot_data.pending_pivots:
+                    self.log_message("\nPending pivots:")
+                    for p in pivot_data.pending_pivots:
+                        self.log_message(f"- {p['type']} tại ${p['price']:,.2f}")
+                        self.log_message(f"  Xác nhận: {p['confirmation_candles']}/3")
+                        if p['type'] in ["HH", "LH"]:
+                            self.log_message(f"  Số nến thấp hơn: {p.get('lower_prices', 0)}/{self.MIN_LOWER_CANDLES}")
+                        else:
+                            self.log_message(f"  Số nến cao hơn: {p.get('higher_prices', 0)}/{self.MIN_HIGHER_CANDLES}")
+
+            # Kiểm tra kết quả cuối cùng
+            confirmed_pivots = pivot_data.get_all_pivots()
+            self.log_message("\n=== Kết quả test ===")
+            self.log_message(f"Số pivot đã xác nhận: {len(confirmed_pivots)}")
+            
+            # Kiểm tra thứ tự các pivot đã xác nhận
+            expected_sequence = ["LL", "HH", "LH", "HL"]
+            actual_sequence = [p["type"] for p in confirmed_pivots]
+            
+            if actual_sequence == expected_sequence:
+                self.log_message("✅ Test thành công: Thứ tự pivot đúng")
+            else:
+                self.log_message("❌ Test thất bại: Thứ tự pivot sai")
+                self.log_message(f"Mong đợi: {expected_sequence}")
+                self.log_message(f"Thực tế: {actual_sequence}")
+                
+            return True
+
+        except Exception as e:
+            self.log_message(f"❌ Lỗi khi chạy test: {str(e)}")
+            return False
+    
 def test_current_time_and_user():
     assert get_current_time() == "2025-03-18 05:32:37"
     assert get_current_user() == "lenhat20791"
