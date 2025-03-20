@@ -1,5 +1,5 @@
 from binance.client import Client
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import os
 import traceback 
@@ -44,6 +44,56 @@ class S1HistoricalTester:
         with open(self.debug_log_file, "a", encoding="utf-8") as f:
             f.write(f"{formatted_message}\n")
  
+    def validate_data(self, df):
+        """Kiểm tra dữ liệu trước khi xử lý"""
+        if df.empty:
+            raise ValueError("Không có dữ liệu")
+            
+        required_columns = ['datetime', 'time', 'high', 'low', 'price']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Thiếu các cột: {missing_columns}")
+            
+        # Kiểm tra giá trị hợp lệ
+        if df['high'].min() <= 0 or df['low'].min() <= 0:
+            raise ValueError("Phát hiện giá không hợp lệ (<=0)")
+            
+        # Kiểm tra high >= low
+        if not (df['high'] >= df['low']).all():
+            raise ValueError("Phát hiện high < low")
+    
+    def analyze_results(self, final_pivots, df):
+        """Phân tích kết quả test chi tiết"""
+        self.log_message("\n=== Phân tích kết quả ===", "SUMMARY")
+        
+        # Thống kê pivot
+        pivot_types = {}
+        for pivot in final_pivots:
+            pivot_type = pivot['type']
+            pivot_types[pivot_type] = pivot_types.get(pivot_type, 0) + 1
+        
+        # Log thống kê
+        self.log_message(f"Tổng số nến: {len(df)}")
+        self.log_message(f"Tổng số pivot: {len(final_pivots)}")
+        
+        # Chi tiết từng loại pivot
+        for ptype in ['HH', 'HL', 'LH', 'LL']:
+            count = pivot_types.get(ptype, 0)
+            self.log_message(f"- {ptype}: {count}")
+        
+        # Thêm thống kê thời gian
+        if final_pivots:
+            time_diffs = []
+            for i in range(1, len(final_pivots)):
+                current = datetime.strptime(final_pivots[i]['time'], '%H:%M')
+                previous = datetime.strptime(final_pivots[i-1]['time'], '%H:%M')
+                diff = (current - previous).total_seconds() / 60  # Convert to minutes
+                time_diffs.append(diff)
+                
+            if time_diffs:
+                avg_time = sum(time_diffs) / len(time_diffs)
+                self.log_message(f"\nThời gian trung bình giữa các pivot: {avg_time:.1f} phút")
+    
     def save_test_results(self, df, results):
         """
         Lưu kết quả test vào Excel và vẽ biểu đồ
@@ -210,10 +260,13 @@ class S1HistoricalTester:
     def run_test(self):
         """Chạy historical test cho S1"""
         try:
-            # Set thời gian test với UTC
-            start_time = datetime(2025, 3, 15, 0, 0, 0)  
-            end_time = datetime(2025, 3, 20, 7, 31, 41)  # Cập nhật thời gian hiện tại
+            # Thiết lập thời gian test
+            # 00:00 ngày 15/03/2025 giờ VN = 17:00 ngày 14/03/2025 UTC
+            start_time = datetime(2025, 3, 14, 17, 0, 0)
             
+            # 09:00 ngày 17/03/2025 giờ VN = 02:00 ngày 17/03/2025 UTC  
+            end_time = datetime(2025, 3, 17, 2, 0, 0)
+                
             self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
             self.log_message(f"Symbol: {self.symbol}")
             self.log_message(f"Interval: {self.interval}")
@@ -228,7 +281,7 @@ class S1HistoricalTester:
                 start_str=int(start_time.timestamp() * 1000),
                 end_str=int(end_time.timestamp() * 1000)
             )
-            
+                
             if not klines:
                 self.log_message("Không tìm thấy dữ liệu cho khoảng thời gian này", "ERROR")
                 return None
@@ -252,12 +305,12 @@ class S1HistoricalTester:
             df = df.rename(columns={'close': 'price'})
             for col in ['high', 'low', 'price']:
                 df[col] = df[col].astype(float)
-            
+                
             self.log_message(f"\nTổng số nến: {len(df)}", "INFO")
-            
+                
             # Reset S1
             pivot_data.clear_all()
-            
+                
             # Thêm pivot ban đầu
             initial_pivots = [
                 {
@@ -275,54 +328,67 @@ class S1HistoricalTester:
                     'datetime': datetime(2025, 3, 14, 22, 30)
                 }
             ]
-            
+                
             # Thêm pivot ban đầu vào S1
             for pivot in initial_pivots:
                 pivot_data.confirmed_pivots.append(pivot)
-                
+                    
             self.log_message("\nĐã thêm pivot ban đầu:", "INFO")
             for pivot in initial_pivots:
                 self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})", "INFO")
 
             # Cung cấp dữ liệu cho S1
             self.log_message("\nBắt đầu cung cấp dữ liệu cho S1...", "INFO")
+
+            # Thêm biến để theo dõi thời điểm log cuối
+            last_log_time = None
+            log_interval = timedelta(minutes=30)  # Log mỗi 30 phút
             
             for index, row in df.iterrows():
-                # Log thông tin nến đang xử lý
-                self.log_message(f"\n=== Nến {row['time']} ===", "DETAIL")
-                self.log_message(f"Giá: ${row['price']:,.2f}")
-                self.log_message(f"High: ${row['high']:,.2f}")
-                self.log_message(f"Low: ${row['low']:,.2f}")
-
-                # Chuẩn bị dữ liệu cho S1
+                current_time = row['datetime']
+                
+                # Chỉ log nếu đã đủ interval hoặc có biến động lớn
+                significant_change = abs(row['high'] - row['low']) > 100  # Biến động >$100
+                should_log = (
+                    last_log_time is None or 
+                    (current_time - last_log_time) >= log_interval or
+                    significant_change
+                )
+                
+                if should_log:
+                    self.log_message(f"\n=== Nến {row['time']} ===", "DETAIL")
+                    self.log_message(f"Giá: ${row['price']:,.2f}")
+                    if significant_change:
+                        self.log_message(f"⚠️ Biến động lớn: ${row['high']:,.2f} - ${row['low']:,.2f}")
+                    last_log_time = current_time
+                
+                # Cung cấp dữ liệu cho S1
                 price_data = {
                     'time': row['time'],
                     'price': row['price'],
                     'high': row['high'],
                     'low': row['low']
                 }
-                
-                # Cung cấp dữ liệu cho S1
                 pivot_data.add_price_data(price_data)
-            
+                
             # Lấy kết quả từ S1
             final_pivots = pivot_data.confirmed_pivots.copy()
-            
+                
             # Log kết quả cuối cùng
             self.log_message("\n=== Kết quả test S1 ===", "SUMMARY")
             self.log_message(f"Tổng số nến đã xử lý: {len(df)}")
             self.log_message(f"Tổng số pivot được S1 xác nhận: {len(final_pivots)}")
-            
+                
             if final_pivots:
                 self.log_message("\nDanh sách pivot S1 đã xác nhận:")
                 for pivot in final_pivots:
                     self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
-            
+                
             # Lưu kết quả vào Excel
             self.save_test_results(df, final_pivots)
-            
+                
             return final_pivots
-            
+                
         except Exception as e:
             self.log_message(f"❌ Lỗi khi chạy test: {str(e)}", "ERROR")
             self.log_message(traceback.format_exc(), "ERROR")
@@ -331,7 +397,7 @@ class S1HistoricalTester:
 def main():
     try:
         # Set thời gian hiện tại UTC
-        utc_time = "2025-03-20 07:31:41"
+        utc_time = "2025-03-20 09:26:57"  # Thời gian mới
         
         # Chuyển đổi sang múi giờ VN cho S1
         utc = pytz.UTC
@@ -360,6 +426,5 @@ def main():
         print(f"Lỗi: {str(e)}")
         print(traceback.format_exc())
         return None
-
 if __name__ == "__main__":
     main()
