@@ -28,19 +28,20 @@ set_current_time_and_user(current_time, current_user)
 
 class S1HistoricalTester:
     def __init__(self, user_login="lenhat20791"):
-        self.client = Client()
-        self.debug_log_file = DEBUG_LOG_FILE
-        self.user_login = user_login
-        self.symbol = "BTCUSDT"           # Thêm symbol
-        self.interval = "30m"             # Thêm interval
-        self.clear_log_file()
-        
-        # Test kết nối
-        self.client.ping()
-        self.log_message("✅ Kết nối Binance thành công", "SUCCESS")
-    except Exception as e:
-        self.log_message(f"❌ Lỗi kết nối Binance: {str(e)}", "ERROR")
-        raise
+        try:
+            self.client = Client()
+            self.debug_log_file = DEBUG_LOG_FILE
+            self.user_login = user_login
+            self.symbol = "BTCUSDT"           # Thêm symbol
+            self.interval = "30m"             # Thêm interval
+            self.clear_log_file()
+            
+            # Test kết nối
+            self.client.ping()
+            self.log_message("✅ Kết nối Binance thành công", "SUCCESS")
+        except Exception as e:
+            self.log_message(f"❌ Lỗi kết nối Binance: {str(e)}", "ERROR")
+            raise
         
     def clear_log_file(self):
         """Xóa nội dung của file log để bắt đầu test mới"""
@@ -129,6 +130,8 @@ class S1HistoricalTester:
                 
                 # Tạo biểu đồ
                 chart = workbook.add_chart({'type': 'line'})
+                
+                # Series cho giá
                 chart.add_series({
                     'name': 'Price',
                     'categories': f"='TestData'!$B$2:$B${len(df) + 1}",
@@ -137,16 +140,25 @@ class S1HistoricalTester:
                     'marker': {'type': 'circle', 'size': 3}
                 })
                 
-                # Thêm series cho các pivot
-                pivot_points = df[df['pivot_type'].notna()]
-                if not pivot_points.empty:
-                    chart.add_series({
-                        'name': 'Pivots',
-                        'categories': f"='TestData'!$B${pivot_points.index[0]+2}:$B${pivot_points.index[-1]+2}",
-                        'values': f"='TestData'!$E${pivot_points.index[0]+2}:$E${pivot_points.index[-1]+2}",
-                        'line': {'none': True},
-                        'marker': {'type': 'diamond', 'size': 8, 'color': 'red'}
-                    })
+                # Thêm series cho các pivot đã confirm
+                pivot_types = {'HH': 'green', 'LL': 'red', 'HL': 'orange', 'LH': 'blue'}
+                
+                for pivot_type, color in pivot_types.items():
+                    # Lọc chỉ lấy pivot type cụ thể
+                    type_points = df[df['pivot_type'] == pivot_type]
+                    
+                    if not type_points.empty:
+                        chart.add_series({
+                            'name': pivot_type,
+                            'categories': f"='TestData'!$B${type_points.index[0]+2}:$B${type_points.index[-1]+2}",
+                            'values': f"='TestData'!$E${type_points.index[0]+2}:$E${type_points.index[-1]+2}",
+                            'line': {'none': True},
+                            'marker': {
+                                'type': 'diamond' if pivot_type in ['HH', 'LL'] else 'square',
+                                'size': 8,
+                                'color': color
+                            }
+                        })
                 
                 # Định dạng biểu đồ
                 chart.set_title({'name': 'Price and Pivots - Test Results'})
@@ -239,6 +251,32 @@ class S1HistoricalTester:
             # Reset trạng thái và thêm pivots đã biết
             pivot_data.clear_all()
    
+            # Thêm 2 pivot ban đầu
+            initial_pivots = [
+                {
+                    'type': 'HL',
+                    'price': 81739.0,
+                    'time': '13:30',
+                    'direction': 'low',
+                    'datetime': datetime(2025, 3, 14, 13, 30)
+                },
+                {
+                    'type': 'HH',
+                    'price': 85274.0,
+                    'time': '22:30',
+                    'direction': 'high',
+                    'datetime': datetime(2025, 3, 14, 22, 30)
+                }
+            ]
+            
+            # Thêm pivot ban đầu vào confirmed_pivots
+            for pivot in initial_pivots:
+                pivot_data.confirmed_pivots.append(pivot)
+                
+            self.log_message("\nĐã thêm pivot ban đầu:", "INFO")
+            for pivot in initial_pivots:
+                self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})", "INFO")
+            
             # Chạy test
             self.log_message("\nBắt đầu phát hiện pivot...", "INFO")
             results = []
