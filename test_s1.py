@@ -85,107 +85,89 @@ class S1HistoricalTester:
     def save_test_results(self, df, results):
         """Lưu kết quả test vào Excel và vẽ biểu đồ"""
         try:
-            # Thêm cột pivot_type vào DataFrame
-            df['pivot_type'] = ''
-            df['trend'] = ''
+            # Sheet 1: Lưu tất cả dữ liệu gốc
+            df['pivot_type'] = ''  # Tạo cột pivot_type
             
-            # Đánh dấu các pivot đã xác nhận và xu hướng
-            for idx, row in df.iterrows():
-                # Tìm pivot tại thời điểm này
-                pivot = next((p for p in results if p['time'] == row['time']), None)
-                if pivot:
-                    df.at[idx, 'pivot_type'] = pivot['type']
-                    
-                    # Cập nhật xu hướng dựa trên pivot gần nhất
-                    pivot_idx = results.index(pivot)
-                    if pivot_idx > 0:
-                        prev_pivot = results[pivot_idx - 1]
-                        df.at[idx, 'trend'] = 'Uptrend' if pivot['price'] > prev_pivot['price'] else 'Downtrend'
-                else:
-                    # Nếu không phải pivot point, lấy xu hướng từ pivot gần nhất
-                    last_pivot = next((p for p in reversed(results) if datetime.strptime(p['time'], '%H:%M') < datetime.strptime(row['time'], '%H:%M')), None)
-                    if last_pivot:
-                        df.at[idx, 'trend'] = 'Uptrend' if row['price'] > last_pivot['price'] else 'Downtrend'
+            # Đánh dấu pivot_type cho các hàng tương ứng
+            for pivot in results:
+                mask = (df['time'] == pivot['time'])
+                if mask.any():
+                    df.loc[mask, 'pivot_type'] = pivot['type']
+            
+            # Sheet 2: Chỉ lấy các hàng có pivot_type
+            pivot_data = df[df['pivot_type'].notna() & (df['pivot_type'] != '')].copy()
+            pivot_data = pivot_data[['datetime', 'price', 'pivot_type']]  # Chỉ giữ các cột cần thiết
             
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
-                # Sheet chính
-                df.to_excel(writer, sheet_name='TestData', index=False)
+                # Ghi Sheet 1 - All Data
+                df.to_excel(writer, sheet_name='AllData', index=False)
+                
+                # Ghi Sheet 2 - Filtered Pivots
+                pivot_data.to_excel(writer, sheet_name='FilteredPivots', index=False)
+                
                 workbook = writer.book
-                worksheet = writer.sheets['TestData']
+                worksheet_pivots = writer.sheets['FilteredPivots']
                 
-                # Định dạng các cột
-                price_format = workbook.add_format({'num_format': '$#,##0.00'})
-                pivot_format = workbook.add_format({
-                    'bold': True,
-                    'font_color': 'red'
-                })
-                trend_format = workbook.add_format({
-                    'bold': True
-                })
-                
-                # Áp dụng định dạng
-                worksheet.set_column('C:E', 12, price_format)
-                worksheet.set_column('F:F', 15, pivot_format)
-                worksheet.set_column('G:G', 15, trend_format)
+                # Định dạng cột trong sheet FilteredPivots
+                worksheet_pivots.set_column('A:A', 20)  # Độ rộng cột datetime
+                worksheet_pivots.set_column('B:B', 15, workbook.add_format({'num_format': '$#,##0.00'}))  # Định dạng giá
+                worksheet_pivots.set_column('C:C', 12)  # Độ rộng cột pivot_type
                 
                 # Tạo biểu đồ
                 chart = workbook.add_chart({'type': 'line'})
                 
-                # Series cho giá
+                # Thêm series cho đường giá
                 chart.add_series({
                     'name': 'Price',
-                    'categories': f"='TestData'!$B$2:$B${len(df) + 1}",
-                    'values': f"='TestData'!$E$2:$E${len(df) + 1}",
-                    'line': {'color': 'blue'},
-                    'marker': {'type': 'circle', 'size': 3}
+                    'categories': f'=FilteredPivots!$A$2:$A${len(pivot_data) + 1}',  # Cột datetime
+                    'values': f'=FilteredPivots!$B$2:$B${len(pivot_data) + 1}',      # Cột price
+                    'line': {'width': 2},
+                    'marker': {
+                        'type': 'circle',
+                        'size': 8,
+                    }
                 })
                 
-                # Thêm series cho các pivot đã confirm
-                pivot_types = {'HH': 'green', 'LL': 'red', 'HL': 'orange', 'LH': 'blue'}
-                
-                for pivot_type, color in pivot_types.items():
-                    # Lọc chỉ lấy pivot type cụ thể
-                    type_points = df[df['pivot_type'] == pivot_type]
-                    
-                    if not type_points.empty:
-                        chart.add_series({
-                            'name': pivot_type,
-                            'categories': f"='TestData'!$B${type_points.index[0]+2}:$B${type_points.index[-1]+2}",
-                            'values': f"='TestData'!$E${type_points.index[0]+2}:$E${type_points.index[-1]+2}",
-                            'line': {'none': True},
-                            'marker': {
-                                'type': 'diamond' if pivot_type in ['HH', 'LL'] else 'square',
-                                'size': 8,
-                                'color': color
-                            }
-                        })
-                
                 # Định dạng biểu đồ
-                chart.set_title({'name': 'Price and Pivots - Test Results'})
-                chart.set_x_axis({'name': 'Time'})
-                chart.set_y_axis({'name': 'Price'})
-                chart.set_size({'width': 720, 'height': 400})
+                chart.set_title({'name': 'Price at Pivot Points'})
+                chart.set_x_axis({
+                    'name': 'Time',
+                    'label_position': 'low',
+                    'num_font': {'rotation': -45},  # Xoay nhãn thời gian
+                    'major_unit': 5
+                })
+                chart.set_y_axis({
+                    'name': 'Price',
+                    'num_format': '$#,##0',
+                    'major_gridlines': {'visible': True}
+                })
+                chart.set_size({'width': 920, 'height': 600})
+                chart.set_legend({'position': 'bottom'})
                 
-                # Thêm biểu đồ vào sheet
-                worksheet.insert_chart('H2', chart)
+                # Thêm biểu đồ vào sheet FilteredPivots
+                worksheet_pivots.insert_chart('E2', chart)
                 
-                # Thêm thống kê
-                stats_row = len(df) + 5
+                # Thống kê trong sheet FilteredPivots
+                stats_row = len(pivot_data) + 5
                 stats_format = workbook.add_format({'bold': True})
-                worksheet.write(stats_row, 0, "Thống kê:", stats_format)
-                worksheet.write(stats_row + 1, 0, "Tổng số nến:")
-                worksheet.write(stats_row + 1, 1, len(df))
-                worksheet.write(stats_row + 2, 0, "Pivot đã xác nhận:")
-                worksheet.write(stats_row + 2, 1, len(results))
                 
-                # Thêm thống kê về các loại pivot
-                pivot_types = pd.Series([p['type'] for p in results]).value_counts()
-                worksheet.write(stats_row + 3, 0, "\nPhân bố pivot:", stats_format)
-                for i, (pivot_type, count) in enumerate(pivot_types.items()):
-                    worksheet.write(stats_row + 4 + i, 0, f"{pivot_type}:")
-                    worksheet.write(stats_row + 4 + i, 1, count)
+                worksheet_pivots.write(stats_row, 0, "Thống kê:", stats_format)
+                worksheet_pivots.write(stats_row + 1, 0, "Tổng số pivot:")
+                worksheet_pivots.write(stats_row + 1, 1, len(pivot_data))
+                
+                # Thống kê theo loại pivot
+                pivot_counts = pivot_data['pivot_type'].value_counts()
+                worksheet_pivots.write(stats_row + 2, 0, "Phân bố pivot:", stats_format)
+                for i, (p_type, count) in enumerate(pivot_counts.items()):
+                    worksheet_pivots.write(stats_row + 3 + i, 0, f"{p_type}:")
+                    worksheet_pivots.write(stats_row + 3 + i, 1, count)
 
             self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx", "SUCCESS")
+            self.log_message(f"Tổng số pivot: {len(pivot_data)}", "INFO")
+            self.log_message("Phân bố pivot:", "INFO")
+            for p_type, count in pivot_counts.items():
+                self.log_message(f"- {p_type}: {count}", "INFO")
+                
             return True
             
         except Exception as e:
@@ -195,20 +177,20 @@ class S1HistoricalTester:
     def run_test(self):
         """Chạy historical test cho S1"""
         try:
-            # Set thời gian test
-            start_time = datetime(2025, 3, 15, 0, 0, 0)  # 00:00 15/03/2025
-            end_time = datetime(2025, 3, 19, 0, 0, 0)    # 00:00 19/03/2025
+            # Set thời gian test với UTC
+            start_time = datetime(2025, 3, 15, 0, 0, 0)  # 00:00 15/03/2025 UTC
+            end_time = datetime(2025, 3, 20, 1, 50, 12)    # 01:50:12 20/03/2025 UTC
             
             self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
             self.log_message(f"Symbol: {self.symbol}")
             self.log_message(f"Interval: {self.interval}")
             self.log_message(f"User: {self.user_login}")
-            self.log_message(f"Thời gian bắt đầu: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-            self.log_message(f"Thời gian kết thúc: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            self.log_message(f"Thời gian bắt đầu (UTC): {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            self.log_message(f"Thời gian kết thúc (UTC): {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
                 
             # Lấy dữ liệu từ Binance
             klines = self.client.get_historical_klines(
-                "BTCUSDT",
+                self.symbol,
                 Client.KLINE_INTERVAL_30MINUTE,
                 start_str=int(start_time.timestamp() * 1000),
                 end_str=int(end_time.timestamp() * 1000)
@@ -250,7 +232,7 @@ class S1HistoricalTester:
             
             # Reset trạng thái và thêm pivots đã biết
             pivot_data.clear_all()
-   
+            
             # Thêm 2 pivot ban đầu
             initial_pivots = [
                 {
@@ -276,12 +258,19 @@ class S1HistoricalTester:
             self.log_message("\nĐã thêm pivot ban đầu:", "INFO")
             for pivot in initial_pivots:
                 self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})", "INFO")
-            
+
             # Chạy test
             self.log_message("\nBắt đầu phát hiện pivot...", "INFO")
-            results = []
-            
+            results = initial_pivots.copy()  # Bắt đầu với các pivot ban đầu
+            last_pivot_index = -1  # Lưu index của pivot cuối cùng
+
             for index, row in df.iterrows():
+                # Log chi tiết cho mỗi nến
+                self.log_message(f"\n=== Phân tích nến {row['time']} ===", "INFO")
+                self.log_message(f"Giá: ${row['price']:,.2f}")
+                self.log_message(f"High: ${row['high']:,.2f}")
+                self.log_message(f"Low: ${row['low']:,.2f}")
+
                 price_data = {
                     'time': row['time'],
                     'price': row['price'],
@@ -289,45 +278,54 @@ class S1HistoricalTester:
                     'low': row['low']
                 }
 
-                # Log chi tiết cho mỗi nến
-                self.log_message(f"\n=== Phân tích nến {row['time']} ===", "INFO")
-                self.log_message(f"Giá: ${row['price']:,.2f}")
-                self.log_message(f"High: ${row['high']:,.2f}")
-                self.log_message(f"Low: ${row['low']:,.2f}")
-                
                 # Thêm dữ liệu giá và xử lý
                 pivot_data.add_price_data(price_data)
                 
+                # Kiểm tra khoảng cách với pivot cuối
+                if last_pivot_index != -1 and (index - last_pivot_index) < 5:
+                    continue  # Bỏ qua nếu chưa đủ 5 nến từ pivot cuối
+
                 # Kiểm tra pivot
-                if row['high'] > row['low']:  # Kiểm tra high trước low
+                current_pivot = None
+                if row['high'] > row['low']:  
+                    # Kiểm tra high trước low
                     high_pivot = pivot_data.detect_pivot(row['high'], 'high')
+                    if high_pivot and high_pivot['type'] in ['HH', 'HL', 'LH', 'LL']:
+                        current_pivot = high_pivot
+                        last_pivot_index = index
+                        self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${row['high']:,.2f})", "SUCCESS")
+                    
                     low_pivot = pivot_data.detect_pivot(row['low'], 'low')
-                else:  # Kiểm tra low trước high
+                    if low_pivot and low_pivot['type'] in ['HH', 'HL', 'LH', 'LL']:
+                        current_pivot = low_pivot
+                        last_pivot_index = index
+                        self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${row['low']:,.2f})", "SUCCESS")
+                else:  
+                    # Kiểm tra low trước high
                     low_pivot = pivot_data.detect_pivot(row['low'], 'low')
+                    if low_pivot and low_pivot['type'] in ['HH', 'HL', 'LH', 'LL']:
+                        current_pivot = low_pivot
+                        last_pivot_index = index
+                        self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${row['low']:,.2f})", "SUCCESS")
+                    
                     high_pivot = pivot_data.detect_pivot(row['high'], 'high')
+                    if high_pivot and high_pivot['type'] in ['HH', 'HL', 'LH', 'LL']:
+                        current_pivot = high_pivot
+                        last_pivot_index = index
+                        self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${row['high']:,.2f})", "SUCCESS")
 
-                if high_pivot:
-                    self.log_message(f"✅ Phát hiện pivot {high_pivot['type']} tại high (${row['high']:,.2f})", "SUCCESS")
-                if low_pivot:
-                    self.log_message(f"✅ Phát hiện pivot {low_pivot['type']} tại low (${row['low']:,.2f})", "SUCCESS")
-
-                
-                # Log trạng thái pivot
-                status_info = self.get_pivot_status()
-                for info in status_info:
-                    self.log_message(info, "STATUS")
-                
-                # Log xu hướng
-                all_pivots = pivot_data.get_all_pivots()
-                if all_pivots:
-                    last_pivot = all_pivots[-1]
-                    trend_info = self.analyze_price_action(row['price'], last_pivot)
+                # Chỉ thêm vào results nếu là pivot hợp lệ và chưa tồn tại
+                if current_pivot and current_pivot not in results:
+                    results.append(current_pivot)
+                    
+                    # Log trạng thái pivot
+                    status_info = self.get_pivot_status()
+                    for info in status_info:
+                        self.log_message(info, "STATUS")
+                    
+                    # Log xu hướng
+                    trend_info = self.analyze_price_action(row['price'], current_pivot)
                     self.log_message(trend_info, "TREND")
-                
-                # Cập nhật results
-                for pivot in all_pivots:
-                    if pivot not in results:
-                        results.append(pivot)
             
             # Tổng kết kết quả
             self.log_message("\n=== Tổng kết kết quả ===", "SUMMARY")
@@ -343,7 +341,7 @@ class S1HistoricalTester:
             self.save_test_results(df, results)
             
             return results
-            
+        
         except Exception as e:
             error_msg = f"❌ Lỗi khi chạy test: {str(e)}"
             self.log_message(error_msg, "ERROR")
