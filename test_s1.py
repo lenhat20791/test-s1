@@ -27,7 +27,16 @@ class S1HistoricalTester:
         except Exception as e:
             self.log_message(f"❌ Lỗi kết nối Binance: {str(e)}", "ERROR")
             raise
-        
+    
+    def convert_to_vn_time(self, utc_time_str):
+        """Chuyển đổi thời gian từ UTC sang VN"""
+        if isinstance(utc_time_str, str):
+            utc_time = datetime.strptime(utc_time_str, '%H:%M')
+        else:
+            utc_time = utc_time_str
+        vn_time = (utc_time + timedelta(hours=7))
+        return vn_time.strftime('%H:%M')
+    
     def clear_log_file(self):
         """Xóa nội dung của file log để bắt đầu test mới"""
         try:
