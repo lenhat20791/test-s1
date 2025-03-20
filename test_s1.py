@@ -43,30 +43,7 @@ class S1HistoricalTester:
         print(formatted_message)
         with open(self.debug_log_file, "a", encoding="utf-8") as f:
             f.write(f"{formatted_message}\n")
-
-    def get_pivot_status(self):
-        """Lấy thông tin về trạng thái pivot hiện tại"""
-        status_info = []
-        
-        # Lấy các pivot gần nhất
-        recent_pivots = pivot_data.get_recent_pivots(4)
-        
-        if recent_pivots:
-            status_info.append("\nPivot gần nhất:")
-            for pivot in recent_pivots:
-                status_info.append(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
-        
-        return status_info
-
-    def analyze_price_action(self, current_price, last_pivot):
-        """Phân tích price action"""
-        if not last_pivot:
-            return "Chưa có pivot để xác định xu hướng"
-            
-        price_diff = current_price - last_pivot['price']
-        trend = "Uptrend" if price_diff > 0 else "Downtrend" if price_diff < 0 else "Sideway"
-        return f"Xu hướng: {trend} (${abs(price_diff):,.2f} từ pivot cuối)"
-
+ 
     def save_test_results(self, df, results):
         """
         Lưu kết quả test vào Excel và vẽ biểu đồ
@@ -234,8 +211,8 @@ class S1HistoricalTester:
         """Chạy historical test cho S1"""
         try:
             # Set thời gian test với UTC
-            start_time = datetime(2025, 3, 15, 0, 0, 0)  # 00:00 15/03/2025 UTC
-            end_time = datetime(2025, 3, 20, 7, 13, 18)   # Thời gian hiện tại UTC
+            start_time = datetime(2025, 3, 15, 0, 0, 0)  
+            end_time = datetime(2025, 3, 20, 7, 31, 41)  # Cập nhật thời gian hiện tại
             
             self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
             self.log_message(f"Symbol: {self.symbol}")
@@ -263,29 +240,25 @@ class S1HistoricalTester:
                 'buy_base_volume', 'buy_quote_volume', 'ignore'
             ])
 
-            # Chuyển đổi timestamp sang datetime với múi giờ UTC
+            # Xử lý timestamp và timezone
             df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
-
-            # Chuyển đổi sang múi giờ Việt Nam
             vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
             df['datetime'] = df['datetime'].dt.tz_convert(vietnam_tz)
             df['datetime'] = df['datetime'].dt.tz_localize(None)
             df['time'] = df['datetime'].dt.strftime('%H:%M')
 
-            # Chọn và đổi tên các cột cần thiết
+            # Chọn và format dữ liệu cần thiết
             df = df[['datetime', 'time', 'high', 'low', 'close']]
             df = df.rename(columns={'close': 'price'})
-
-            # Chuyển đổi các cột giá sang float
             for col in ['high', 'low', 'price']:
                 df[col] = df[col].astype(float)
             
             self.log_message(f"\nTổng số nến: {len(df)}", "INFO")
             
-            # Reset trạng thái pivot_data
+            # Reset S1
             pivot_data.clear_all()
             
-            # Thêm 2 pivot ban đầu
+            # Thêm pivot ban đầu
             initial_pivots = [
                 {
                     'type': 'HL',
@@ -303,7 +276,7 @@ class S1HistoricalTester:
                 }
             ]
             
-            # Thêm pivot ban đầu vào confirmed_pivots
+            # Thêm pivot ban đầu vào S1
             for pivot in initial_pivots:
                 pivot_data.confirmed_pivots.append(pivot)
                 
@@ -311,18 +284,17 @@ class S1HistoricalTester:
             for pivot in initial_pivots:
                 self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})", "INFO")
 
-            # Bắt đầu phân tích từng nến
-            self.log_message("\nBắt đầu phát hiện pivot...", "INFO")
+            # Cung cấp dữ liệu cho S1
+            self.log_message("\nBắt đầu cung cấp dữ liệu cho S1...", "INFO")
             
-            # Duyệt qua từng nến và thêm vào s1
             for index, row in df.iterrows():
-                # Log thông tin nến
-                self.log_message(f"\n=== Phân tích nến {row['time']} ===", "DETAIL")
+                # Log thông tin nến đang xử lý
+                self.log_message(f"\n=== Nến {row['time']} ===", "DETAIL")
                 self.log_message(f"Giá: ${row['price']:,.2f}")
                 self.log_message(f"High: ${row['high']:,.2f}")
                 self.log_message(f"Low: ${row['low']:,.2f}")
 
-                # Chỉ tạo price_data và thêm vào s1
+                # Chuẩn bị dữ liệu cho S1
                 price_data = {
                     'time': row['time'],
                     'price': row['price'],
@@ -330,23 +302,19 @@ class S1HistoricalTester:
                     'low': row['low']
                 }
                 
-                # Thêm dữ liệu vào s1 và để s1 xử lý
+                # Cung cấp dữ liệu cho S1
                 pivot_data.add_price_data(price_data)
-                
-                # Để s1 tự phát hiện pivot
-                high_pivot = pivot_data.detect_pivot(row['high'], 'high')
-                low_pivot = pivot_data.detect_pivot(row['low'], 'low')
             
-            # Lấy kết quả cuối cùng từ s1
+            # Lấy kết quả từ S1
             final_pivots = pivot_data.confirmed_pivots.copy()
             
-            # Tổng kết kết quả
-            self.log_message("\n=== Tổng kết kết quả ===", "SUMMARY")
-            self.log_message(f"Tổng số nến phân tích: {len(df)}")
-            self.log_message(f"Tổng số pivot đã xác nhận: {len(final_pivots)}")
+            # Log kết quả cuối cùng
+            self.log_message("\n=== Kết quả test S1 ===", "SUMMARY")
+            self.log_message(f"Tổng số nến đã xử lý: {len(df)}")
+            self.log_message(f"Tổng số pivot được S1 xác nhận: {len(final_pivots)}")
             
             if final_pivots:
-                self.log_message("\nDanh sách pivot đã xác nhận:")
+                self.log_message("\nDanh sách pivot S1 đã xác nhận:")
                 for pivot in final_pivots:
                     self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
             
@@ -362,12 +330,12 @@ class S1HistoricalTester:
             
 def main():
     try:
-        # Chuyển đổi UTC sang múi giờ Việt Nam
-        utc_time = "2025-03-20 06:36:35"   # UTC time
+        # Set thời gian hiện tại UTC
+        utc_time = "2025-03-20 07:31:41"
+        
+        # Chuyển đổi sang múi giờ VN cho S1
         utc = pytz.UTC
         vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-
-        # Parse UTC time và chuyển sang múi giờ Việt Nam
         utc_dt = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=utc)
         vietnam_time = utc_dt.astimezone(vietnam_tz)
         current_time = vietnam_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -377,10 +345,10 @@ def main():
         print(f"Current Date and Time (UTC): {utc_time}")
         print(f"Current User's Login: {current_user}")
         
-        # Set thời gian và user hiện tại
+        # Cung cấp thông tin môi trường cho S1
         set_current_time_and_user(current_time, current_user)
         
-        # Khởi tạo và chạy tester
+        # Chạy test
         tester = S1HistoricalTester(current_user)
         print("Đang chạy historical test cho S1...")
         results = tester.run_test()
