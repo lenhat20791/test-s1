@@ -235,7 +235,7 @@ class S1HistoricalTester:
         try:
             # Set thời gian test với UTC
             start_time = datetime(2025, 3, 15, 0, 0, 0)  # 00:00 15/03/2025 UTC
-            end_time = datetime(2025, 3, 20, 7, 7, 26)   # 07:07:26 20/03/2025 UTC
+            end_time = datetime(2025, 3, 20, 7, 13, 18)   # Thời gian hiện tại UTC
             
             self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
             self.log_message(f"Symbol: {self.symbol}")
@@ -256,7 +256,7 @@ class S1HistoricalTester:
                 self.log_message("Không tìm thấy dữ liệu cho khoảng thời gian này", "ERROR")
                 return None
 
-            # Chuyển đổi dữ liệu
+            # Chuyển đổi dữ liệu thành DataFrame
             df = pd.DataFrame(klines, columns=[
                 'timestamp', 'open', 'high', 'low', 'close', 
                 'volume', 'close_time', 'quote_volume', 'trades',
@@ -269,11 +269,7 @@ class S1HistoricalTester:
             # Chuyển đổi sang múi giờ Việt Nam
             vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
             df['datetime'] = df['datetime'].dt.tz_convert(vietnam_tz)
-
-            # Loại bỏ thông tin timezone để có thể lưu vào Excel
             df['datetime'] = df['datetime'].dt.tz_localize(None)
-
-            # Format lại cột time chỉ lấy giờ:phút
             df['time'] = df['datetime'].dt.strftime('%H:%M')
 
             # Chọn và đổi tên các cột cần thiết
@@ -315,79 +311,33 @@ class S1HistoricalTester:
             for pivot in initial_pivots:
                 self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})", "INFO")
 
-            # Khởi tạo biến theo dõi
-            total_pivots_detected = len(initial_pivots)
-            pivot_types_count = {'HH': 0, 'HL': 0, 'LH': 0, 'LL': 0}
-            
-            # Cập nhật count cho pivot ban đầu
-            for pivot in initial_pivots:
-                pivot_types_count[pivot['type']] += 1
-
             # Bắt đầu phân tích từng nến
             self.log_message("\nBắt đầu phát hiện pivot...", "INFO")
             
+            # Duyệt qua từng nến và thêm vào s1
             for index, row in df.iterrows():
-                # Log chi tiết cho mỗi nến
+                # Log thông tin nến
                 self.log_message(f"\n=== Phân tích nến {row['time']} ===", "DETAIL")
                 self.log_message(f"Giá: ${row['price']:,.2f}")
                 self.log_message(f"High: ${row['high']:,.2f}")
                 self.log_message(f"Low: ${row['low']:,.2f}")
 
-                # Tạo price_data cho nến hiện tại
+                # Chỉ tạo price_data và thêm vào s1
                 price_data = {
                     'time': row['time'],
                     'price': row['price'],
                     'high': row['high'],
                     'low': row['low']
                 }
-
-                # Thêm dữ liệu giá và xử lý
+                
+                # Thêm dữ liệu vào s1 và để s1 xử lý
                 pivot_data.add_price_data(price_data)
                 
-                # Kiểm tra pivot high
+                # Để s1 tự phát hiện pivot
                 high_pivot = pivot_data.detect_pivot(row['high'], 'high')
-                if high_pivot and high_pivot['type'] in ['HH', 'HL', 'LH', 'LL']:
-                    if not any(p['time'] == high_pivot['time'] and p['type'] == high_pivot['type'] 
-                              for p in pivot_data.confirmed_pivots):
-                        total_pivots_detected += 1
-                        pivot_types_count[high_pivot['type']] += 1
-                        self.log_message(f"\n✅ Phát hiện pivot {high_pivot['type']} tại high (${row['high']:,.2f})", "SUCCESS")
-                        
-                        # Log trạng thái pivot
-                        status_info = self.get_pivot_status()
-                        for info in status_info:
-                            self.log_message(info, "STATUS")
-                        
-                        # Log xu hướng
-                        trend_info = self.analyze_price_action(row['price'], high_pivot)
-                        self.log_message(trend_info, "TREND")
-
-                # Kiểm tra pivot low
                 low_pivot = pivot_data.detect_pivot(row['low'], 'low')
-                if low_pivot and low_pivot['type'] in ['HH', 'HL', 'LH', 'LL']:
-                    if not any(p['time'] == low_pivot['time'] and p['type'] == low_pivot['type'] 
-                              for p in pivot_data.confirmed_pivots):
-                        total_pivots_detected += 1
-                        pivot_types_count[low_pivot['type']] += 1
-                        self.log_message(f"\n✅ Phát hiện pivot {low_pivot['type']} tại low (${row['low']:,.2f})", "SUCCESS")
-                        
-                        # Log trạng thái pivot
-                        status_info = self.get_pivot_status()
-                        for info in status_info:
-                            self.log_message(info, "STATUS")
-                        
-                        # Log xu hướng
-                        trend_info = self.analyze_price_action(row['price'], low_pivot)
-                        self.log_message(trend_info, "TREND")
-
-                # Log tổng kết khi phát hiện pivot mới
-                if high_pivot or low_pivot:
-                    self.log_message("\n=== Tổng kết nến hiện tại ===", "SUMMARY")
-                    self.log_message(f"Tổng số pivot đã phát hiện: {total_pivots_detected}")
-                    for ptype, count in pivot_types_count.items():
-                        self.log_message(f"- {ptype}: {count}")
             
-            # Lấy danh sách pivot cuối cùng
+            # Lấy kết quả cuối cùng từ s1
             final_pivots = pivot_data.confirmed_pivots.copy()
             
             # Tổng kết kết quả
