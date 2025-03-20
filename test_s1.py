@@ -83,95 +83,99 @@ class S1HistoricalTester:
         return f"Xu hướng: {trend} (${abs(price_diff):,.2f} từ pivot cuối)"
 
     def save_test_results(self, df, results):
-        """Lưu kết quả test vào Excel và vẽ biểu đồ"""
         try:
-            # Sheet 1: Lưu tất cả dữ liệu gốc
-            df['pivot_type'] = ''  # Tạo cột pivot_type
-            
-            # Đánh dấu pivot_type cho các hàng tương ứng
+            # Tạo DataFrame mới chỉ cho các pivot
+            pivot_data = []
             for pivot in results:
-                mask = (df['time'] == pivot['time'])
-                if mask.any():
-                    df.loc[mask, 'pivot_type'] = pivot['type']
+                # Tìm datetime tương ứng từ DataFrame gốc
+                pivot_datetime = df[df['time'] == pivot['time']]['datetime'].iloc[0]
+                
+                pivot_data.append({
+                    'datetime': pivot_datetime,
+                    'price': pivot['price'],
+                    'pivot_type': pivot['type']
+                })
             
-            # Sheet 2: Chỉ lấy các hàng có pivot_type
-            pivot_data = df[df['pivot_type'].notna() & (df['pivot_type'] != '')].copy()
-            pivot_data = pivot_data[['datetime', 'price', 'pivot_type']]  # Chỉ giữ các cột cần thiết
+            # Chuyển list thành DataFrame
+            pivot_df = pd.DataFrame(pivot_data)
+            
+            # Sắp xếp theo thời gian
+            pivot_df = pivot_df.sort_values('datetime')
             
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
-                # Ghi Sheet 1 - All Data
-                df.to_excel(writer, sheet_name='AllData', index=False)
-                
-                # Ghi Sheet 2 - Filtered Pivots
-                pivot_data.to_excel(writer, sheet_name='FilteredPivots', index=False)
+                # Ghi vào sheet Pivot Analysis
+                pivot_df.to_excel(writer, sheet_name='Pivot Analysis', index=False)
                 
                 workbook = writer.book
-                worksheet_pivots = writer.sheets['FilteredPivots']
+                worksheet = writer.sheets['Pivot Analysis']
                 
-                # Định dạng cột trong sheet FilteredPivots
-                worksheet_pivots.set_column('A:A', 20)  # Độ rộng cột datetime
-                worksheet_pivots.set_column('B:B', 15, workbook.add_format({'num_format': '$#,##0.00'}))  # Định dạng giá
-                worksheet_pivots.set_column('C:C', 12)  # Độ rộng cột pivot_type
+                # Định dạng cột
+                date_format = workbook.add_format({'num_format': 'yyyy-mm-dd hh:mm:ss'})
+                price_format = workbook.add_format({'num_format': '$#,##0.00'})
                 
-                # Tạo biểu đồ
-                chart = workbook.add_chart({'type': 'line'})
+                worksheet.set_column('A:A', 20, date_format)  # datetime
+                worksheet.set_column('B:B', 15, price_format) # price
+                worksheet.set_column('C:C', 12)              # pivot_type
                 
-                # Thêm series cho đường giá
+                # Thêm thống kê
+                stats_row = len(pivot_df) + 3
+                stats_format = workbook.add_format({'bold': True})
+                
+                worksheet.write(stats_row, 0, "Thống kê:", stats_format)
+                worksheet.write(stats_row + 1, 0, "Tổng số pivot:")
+                worksheet.write(stats_row + 1, 1, len(pivot_df))
+                
+                # Thống kê theo loại pivot
+                pivot_counts = pivot_df['pivot_type'].value_counts()
+                worksheet.write(stats_row + 2, 0, "Phân bố pivot:", stats_format)
+                
+                row = stats_row + 3
+                for pivot_type in ['HH', 'HL', 'LH', 'LL']:
+                    if pivot_type in pivot_counts:
+                        worksheet.write(row, 0, f"{pivot_type}:")
+                        worksheet.write(row, 1, pivot_counts[pivot_type])
+                        row += 1
+                
+                # Thêm biểu đồ
+                chart = workbook.add_chart({'type': 'scatter'})
+                
+                # Thêm series cho price
                 chart.add_series({
                     'name': 'Price',
-                    'categories': f'=FilteredPivots!$A$2:$A${len(pivot_data) + 1}',  # Cột datetime
-                    'values': f'=FilteredPivots!$B$2:$B${len(pivot_data) + 1}',      # Cột price
-                    'line': {'width': 2},
-                    'marker': {
-                        'type': 'circle',
-                        'size': 8,
-                    }
+                    'categories': f'=Pivot Analysis!$A$2:$A${len(pivot_df) + 1}',
+                    'values': f'=Pivot Analysis!$B$2:$B${len(pivot_df) + 1}',
+                    'line': {'width': 2.25},
+                    'marker': {'type': 'circle', 'size': 8}
                 })
                 
-                # Định dạng biểu đồ
-                chart.set_title({'name': 'Price at Pivot Points'})
+                chart.set_title({'name': 'Pivot Points Analysis'})
                 chart.set_x_axis({
                     'name': 'Time',
+                    'num_format': 'dd/mm/yyyy\nhh:mm',
                     'label_position': 'low',
-                    'num_font': {'rotation': -45},  # Xoay nhãn thời gian
-                    'major_unit': 5
+                    'major_unit': 1,
+                    'major_unit_type': 'days'
                 })
                 chart.set_y_axis({
                     'name': 'Price',
-                    'num_format': '$#,##0',
-                    'major_gridlines': {'visible': True}
+                    'num_format': '$#,##0'
                 })
+                
                 chart.set_size({'width': 920, 'height': 600})
-                chart.set_legend({'position': 'bottom'})
+                worksheet.insert_chart('E2', chart)
                 
-                # Thêm biểu đồ vào sheet FilteredPivots
-                worksheet_pivots.insert_chart('E2', chart)
-                
-                # Thống kê trong sheet FilteredPivots
-                stats_row = len(pivot_data) + 5
-                stats_format = workbook.add_format({'bold': True})
-                
-                worksheet_pivots.write(stats_row, 0, "Thống kê:", stats_format)
-                worksheet_pivots.write(stats_row + 1, 0, "Tổng số pivot:")
-                worksheet_pivots.write(stats_row + 1, 1, len(pivot_data))
-                
-                # Thống kê theo loại pivot
-                pivot_counts = pivot_data['pivot_type'].value_counts()
-                worksheet_pivots.write(stats_row + 2, 0, "Phân bố pivot:", stats_format)
-                for i, (p_type, count) in enumerate(pivot_counts.items()):
-                    worksheet_pivots.write(stats_row + 3 + i, 0, f"{p_type}:")
-                    worksheet_pivots.write(stats_row + 3 + i, 1, count)
-
             self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx", "SUCCESS")
-            self.log_message(f"Tổng số pivot: {len(pivot_data)}", "INFO")
+            self.log_message(f"Tổng số pivot: {len(pivot_df)}", "INFO")
             self.log_message("Phân bố pivot:", "INFO")
-            for p_type, count in pivot_counts.items():
-                self.log_message(f"- {p_type}: {count}", "INFO")
-                
+            for pivot_type in ['HH', 'HL', 'LH', 'LL']:
+                if pivot_type in pivot_counts:
+                    self.log_message(f"- {pivot_type}: {pivot_counts[pivot_type]}", "INFO")
+            
             return True
             
         except Exception as e:
             self.log_message(f"Lỗi khi lưu Excel: {str(e)}", "ERROR")
+            self.log_message(traceback.format_exc(), "ERROR")
             return False
 
     def run_test(self):
@@ -327,29 +331,59 @@ class S1HistoricalTester:
                     trend_info = self.analyze_price_action(row['price'], current_pivot)
                     self.log_message(trend_info, "TREND")
             
+            # Lấy danh sách pivot cuối cùng từ pivot_data
+            final_pivots = pivot_data.confirmed_pivots.copy()  # Lấy trực tiếp từ pivot_data thay vì dùng results
+            
             # Tổng kết kết quả
             self.log_message("\n=== Tổng kết kết quả ===", "SUMMARY")
             self.log_message(f"Tổng số nến: {len(df)}")
-            self.log_message(f"Tổng số pivot đã xác nhận: {len(results)}")
+            self.log_message(f"Tổng số pivot đã xác nhận: {len(final_pivots)}")
             
-            if results:
+            if final_pivots:
                 self.log_message("\nDanh sách pivot đã xác nhận:")
-                for pivot in results:
+                for pivot in final_pivots:
                     self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
             
-            # Lưu kết quả vào Excel
-            self.save_test_results(df, results)
+            # Lưu kết quả vào Excel với danh sách pivot cuối cùng
+            self.save_test_results(df, final_pivots)
             
-            return results
-        
-        except Exception as e:
-            error_msg = f"❌ Lỗi khi chạy test: {str(e)}"
-            self.log_message(error_msg, "ERROR")
-            return None
+            return final_pivots
             
 # Entry point
+# Thay thế phần cuối của file test_s1.py
+
+def main():
+    try:
+        # Chuyển đổi UTC sang múi giờ Việt Nam
+        utc_time = "2025-03-20 06:34:03"   # UTC time
+        utc = pytz.UTC
+        vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+
+        # Parse UTC time và chuyển sang múi giờ Việt Nam
+        utc_dt = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=utc)
+        vietnam_time = utc_dt.astimezone(vietnam_tz)
+        current_time = vietnam_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        current_user = "lenhat20791"
+        
+        print(f"Current Date and Time (UTC): {utc_time}")
+        print(f"Current User's Login: {current_user}")
+        
+        # Set thời gian và user hiện tại
+        set_current_time_and_user(current_time, current_user)
+        
+        # Khởi tạo và chạy tester
+        tester = S1HistoricalTester()
+        print("Đang chạy historical test cho S1...")
+        results = tester.run_test()
+        
+        print("\nTest hoàn tất! Kiểm tra file debug_historical_test.log và test_results.xlsx để xem chi tiết.")
+        return results
+        
+    except Exception as e:
+        print(f"Lỗi: {str(e)}")
+        print(traceback.format_exc())
+        return None
+
 if __name__ == "__main__":
-    tester = S1HistoricalTester()
-    print("Đang chạy historical test cho S1...")
-    results = tester.run_test()
-    print("\nTest hoàn tất! Kiểm tra file debug_historical_test.log và test_results.xlsx để xem chi tiết.")
+    main()
