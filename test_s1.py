@@ -260,19 +260,22 @@ class S1HistoricalTester:
     def run_test(self):
         """Chạy historical test cho S1"""
         try:
-            # Thiết lập thời gian test
-            # 00:00 ngày 15/03/2025 giờ VN = 17:00 ngày 14/03/2025 UTC
+            # Thời gian bắt đầu: 00:00 15/03 VN = 17:00 14/03 UTC
             start_time = datetime(2025, 3, 14, 17, 0, 0)
+            start_time_vn = (start_time + timedelta(hours=7)).strftime('%Y-%m-%d %H:%M:%S')
             
-            # 09:00 ngày 17/03/2025 giờ VN = 02:00 ngày 17/03/2025 UTC  
-            end_time = datetime(2025, 3, 17, 2, 0, 0)
+            # Thời gian kết thúc: 19:00 15/03 VN = 12:00 15/03 UTC
+            end_time = datetime(2025, 3, 15, 12, 0, 0)  
+            end_time_vn = (end_time + timedelta(hours=7)).strftime('%Y-%m-%d %H:%M:%S')
                 
             self.log_message("\n=== Bắt đầu test S1 ===", "INFO")
-            self.log_message(f"Symbol: {self.symbol}")
-            self.log_message(f"Interval: {self.interval}")
-            self.log_message(f"User: {self.user_login}")
-            self.log_message(f"Thời gian bắt đầu (UTC): {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-            self.log_message(f"Thời gian kết thúc (UTC): {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            self.log_message(f"Symbol: {self.symbol}", "INFO")
+            self.log_message(f"Interval: {self.interval}", "INFO")
+            self.log_message(f"User: {self.user_login}", "INFO")
+            self.log_message(f"Thời gian bắt đầu (Vietnam): {start_time_vn}", "INFO")
+            self.log_message(f"Thời gian kết thúc (Vietnam): {end_time_vn}", "INFO")
+            self.log_message(f"Thời gian bắt đầu (UTC): {start_time.strftime('%Y-%m-%d %H:%M:%S')}", "INFO")
+            self.log_message(f"Thời gian kết thúc (UTC): {end_time.strftime('%Y-%m-%d %H:%M:%S')}", "INFO")
                 
             # Lấy dữ liệu từ Binance
             klines = self.client.get_historical_klines(
@@ -399,13 +402,18 @@ def main():
         # Set thời gian hiện tại UTC
         utc_time = "2025-03-20 09:26:57"  # Thời gian mới
         
-        # Chuyển đổi sang múi giờ VN cho S1
+        # Chuyển sang múi giờ Việt Nam (+7)
         utc = pytz.UTC
         vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
         utc_dt = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S').replace(tzinfo=utc)
         vietnam_time = utc_dt.astimezone(vietnam_tz)
+        
+        # Format thời gian VN
         current_time = vietnam_time.strftime('%Y-%m-%d %H:%M:%S')
-
+        save_log(f"\n=== Thông tin thời gian ===", DEBUG_LOG_FILE)
+        save_log(f"UTC time: {utc_time}", DEBUG_LOG_FILE)
+        save_log(f"Vietnam time: {current_time} (GMT+7)", DEBUG_LOG_FILE)
+        
         current_user = "lenhat20791"
         
         print(f"Current Date and Time (UTC): {utc_time}")
