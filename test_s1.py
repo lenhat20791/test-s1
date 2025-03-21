@@ -163,7 +163,8 @@ class S1HistoricalTester:
                         'datetime': pivot_datetime,
                         'price': pivot['price'],
                         'pivot_type': pivot['type'],
-                        'time_vn': pivot['time']  # Lưu lại thời gian dạng HH:MM
+                        'time_vn': pivot['time'],
+                        'date_vn': pivot_date
                     })
             
             # Chuyển list thành DataFrame và sắp xếp theo thời gian
@@ -347,24 +348,31 @@ class S1HistoricalTester:
             # Xử lý timestamp và timezone
             df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
             vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+
             # Lưu thời gian UTC để theo dõi
             df['utc_time'] = df['datetime'].dt.strftime('%H:%M')
+            df['utc_date'] = df['datetime'].dt.strftime('%Y-%m-%d')
+
             # Chuyển sang múi giờ Việt Nam
             df['datetime'] = df['datetime'].dt.tz_convert(vietnam_tz)
+
             # Lưu thời gian Việt Nam
             df['vn_time'] = df['datetime'].dt.strftime('%H:%M')
+            df['vn_date'] = df['datetime'].dt.strftime('%Y-%m-%d')
+            df['vn_date_time'] = df['datetime'].dt.strftime('%Y-%m-%d %H:%M')
+
             # Loại bỏ timezone để tránh vấn đề với Excel
             df['datetime'] = df['datetime'].dt.tz_localize(None)
 
             # Ghi log so sánh thời gian
             self.log_message("\n=== Chuyển đổi múi giờ ===", "INFO")
-            self.log_message("| UTC Time | Vietnam Time |", "INFO")
-            self.log_message("|----------|--------------|", "INFO")
+            self.log_message("| UTC Date | UTC Time | Vietnam Date | Vietnam Time |", "INFO")
+            self.log_message("|----------|----------|--------------|--------------|", "INFO")
             for idx, row in df.head(5).iterrows():  # Hiển thị 5 hàng đầu tiên
-                self.log_message(f"| {row['utc_time']} | {row['vn_time']} |", "INFO")
-    
+                self.log_message(f"| {row['utc_date']} | {row['utc_time']} | {row['vn_date']} | {row['vn_time']} |", "INFO")
+
             # Chọn và format dữ liệu cần thiết
-            df = df[['datetime', 'utc_time', 'vn_time', 'high', 'low', 'close']]
+            df = df[['datetime', 'utc_time', 'utc_date', 'vn_time', 'vn_date', 'vn_date_time', 'high', 'low', 'close']]
             df = df.rename(columns={'close': 'price'})
             for col in ['high', 'low', 'price']:
                 df[col] = df[col].astype(float)
@@ -379,16 +387,18 @@ class S1HistoricalTester:
                 {
                     'type': 'HL',
                     'price': 81739.0,
-                    'time': '13:30',  # Giờ Việt Nam
+                    'time': '13:30',  # Đây là giờ Việt Nam
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 14, 13, 30)
+                    'datetime': datetime(2025, 3, 14, 13, 30),  # Đây là giờ Việt Nam
+                    'date': '2025-03-14'  # Thêm thông tin ngày
                 },
                 {
                     'type': 'HH',
                     'price': 85274.0,
-                    'time': '22:30',  # Giờ Việt Nam
+                    'time': '22:30',  # Đây là giờ Việt Nam
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 14, 22, 30)
+                    'datetime': datetime(2025, 3, 14, 22, 30),  # Đây là giờ Việt Nam
+                    'date': '2025-03-14'  # Thêm thông tin ngày
                 }
             ]
 
@@ -398,7 +408,7 @@ class S1HistoricalTester:
                     
             self.log_message("\nĐã thêm pivot ban đầu:", "INFO")
             for pivot in initial_pivots:
-                self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})", "INFO")
+                self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['date']} {pivot['time']})", "INFO")
 
             # Cung cấp dữ liệu cho S1
             self.log_message("\nBắt đầu cung cấp dữ liệu cho S1...", "INFO")
@@ -419,7 +429,8 @@ class S1HistoricalTester:
                 )
                 
                 if should_log:
-                    self.log_message(f"\n=== Nến {row['vn_time']} ===", "DETAIL")  # Sử dụng vn_time
+                    # Hiển thị đầy đủ ngày tháng và giờ của nến (theo giờ Việt Nam)
+                    self.log_message(f"\n=== Nến {row['vn_date']} {row['vn_time']} ===", "DETAIL")
                     self.log_message(f"Giá: ${row['price']:,.2f}")
                     if significant_change:
                         self.log_message(f"⚠️ Biến động lớn: ${row['high']:,.2f} - ${row['low']:,.2f}")
@@ -427,10 +438,11 @@ class S1HistoricalTester:
                 
                 # Cung cấp dữ liệu cho S1
                 price_data = {
-                    'time': row['vn_time'],  # Sử dụng cột vn_time thay vì time
+                    'time': row['vn_time'],  # Thời gian Việt Nam
                     'price': row['price'],
                     'high': row['high'],
-                    'low': row['low']
+                    'low': row['low'],
+                    'date': row['vn_date']  # Thêm thông tin ngày
                 }
                 # Thay đổi từ add_price_data sang process_new_data
                 pivot_data.process_new_data(price_data)
@@ -446,8 +458,21 @@ class S1HistoricalTester:
             if final_pivots:
                 self.log_message("\nDanh sách pivot S1 đã xác nhận:")
                 for pivot in final_pivots:
-                    self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
-                
+                    pivot_date = pivot.get('date', '')
+                    if not pivot_date and 'datetime' in pivot and isinstance(pivot['datetime'], datetime):
+                        pivot_date = pivot['datetime'].strftime('%Y-%m-%d')
+                        
+                    if pivot_date:
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
+                    else:
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
+                    
+                    # Hiển thị thông tin pivot
+                    if pivot_date:
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
+                    else:
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
+                        
             # Lưu kết quả vào Excel
             self.save_test_results(df, final_pivots)
                 
