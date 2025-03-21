@@ -387,21 +387,41 @@ class S1HistoricalTester:
                 
             # Đảm bảo initial pivots sử dụng giờ Việt Nam
             initial_pivots = [
+                # Pivot 1 - LL
+                {
+                    'type': 'LL',
+                    'price': 79902.0,
+                    'time': '00:30',
+                    'direction': 'low',
+                    'datetime': datetime(2025, 3, 14, 0, 30),
+                    'date': '2025-03-14'
+                },
+                # Pivot 2 - LH
+                {
+                    'type': 'LH',
+                    'price': 82252.0,
+                    'time': '09:30',
+                    'direction': 'high',
+                    'datetime': datetime(2025, 3, 14, 9, 30),
+                    'date': '2025-03-14'
+                },
+                # Pivot 3 - HL
                 {
                     'type': 'HL',
-                    'price': 81739.0,
-                    'time': '13:30',  # Đây là giờ Việt Nam
+                    'price': 81716.0,
+                    'time': '13:30',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 14, 13, 30),  # Đây là giờ Việt Nam
-                    'date': '2025-03-14'  # Thêm thông tin ngày
+                    'datetime': datetime(2025, 3, 14, 13, 30),
+                    'date': '2025-03-14'
                 },
+                # Pivot 4 - HH
                 {
                     'type': 'HH',
-                    'price': 85274.0,
-                    'time': '22:30',  # Đây là giờ Việt Nam
+                    'price': 85285.0,
+                    'time': '22:30',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 14, 22, 30),  # Đây là giờ Việt Nam
-                    'date': '2025-03-14'  # Thêm thông tin ngày
+                    'datetime': datetime(2025, 3, 14, 22, 30),
+                    'date': '2025-03-14'
                 }
             ]
 
@@ -409,7 +429,8 @@ class S1HistoricalTester:
             for pivot in initial_pivots:
                 pivot_data.confirmed_pivots.append(pivot)
                     
-            self.log_message("\nĐã thêm pivot ban đầu:", "INFO")
+            self.log_message("\nĐã thêm pivot ban đầu từ Trading View:", "INFO")
+            self.log_message("(Tất cả thời gian là giờ Việt Nam GMT+7)", "INFO")
             for pivot in initial_pivots:
                 self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['date']} {pivot['time']})", "INFO")
 
@@ -514,7 +535,7 @@ def main():
             
             # Nếu không có, sử dụng thời gian được cung cấp
             if not utc_time:
-                utc_time = "2025-03-21 01:34:27"  # Thời gian từ prompt
+                utc_time = "2025-03-21 02:40:48"   # Thời gian từ prompt
         
         # Chuyển sang múi giờ Việt Nam (+7)
         utc = pytz.UTC
