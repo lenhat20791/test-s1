@@ -142,28 +142,29 @@ class S1HistoricalTester:
             pivot_records = []
             
             for pivot in confirmed_pivots:
-                # Tạo UTC datetime từ time của pivot
+                # Lấy thời gian từ pivot
                 pivot_time = pivot['time']  # Format: 'HH:MM'
-                hour, minute = map(int, pivot_time.split(':'))
                 
-                # Lấy ngày từ pivot hoặc từ df
-                pivot_date = pivot.get('date', df['utc_date'].iloc[0])
+                # Tìm bản ghi tương ứng trong df dựa trên vn_time
+                matching_row = df[df['vn_time'] == pivot_time]
                 
-                # Tạo UTC datetime
-                utc_dt = datetime.strptime(f"{pivot_date} {pivot_time}", '%Y-%m-%d %H:%M')
-                
-                # Chuyển sang VN time để lấy giờ VN
-                vn_dt = utc_dt + timedelta(hours=7)
-                vn_time = vn_dt.strftime('%H:%M')
-                vn_date = vn_dt.strftime('%Y-%m-%d')
-
-                pivot_records.append({
-                    'datetime': utc_dt,          # Giữ UTC
-                    'price': pivot['price'],
-                    'pivot_type': pivot['type'],
-                    'time_vn': vn_time,          # Giờ VN
-                    'date_vn': vn_date           # Ngày VN
-                })
+                if not matching_row.empty:
+                    # Lấy UTC datetime từ dữ liệu gốc
+                    utc_datetime = pd.to_datetime(matching_row['datetime'].iloc[0])
+                    utc_time = utc_datetime.strftime('%H:%M')
+                    utc_date = utc_datetime.strftime('%Y-%m-%d')
+                    
+                    # Lấy VN time từ pivot
+                    vn_time = pivot_time
+                    vn_date = pivot.get('date')
+                    
+                    pivot_records.append({
+                        'datetime_utc': utc_datetime,
+                        'price': pivot['price'],
+                        'pivot_type': pivot['type'],
+                        'time_vn': vn_time,
+                        'date_vn': vn_date
+                    })
 
             
             # Chuyển list thành DataFrame và sắp xếp theo thời gian
