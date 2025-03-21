@@ -394,7 +394,8 @@ class S1HistoricalTester:
                     'time': '00:30',
                     'direction': 'low',
                     'datetime': datetime(2025, 3, 14, 0, 30),
-                    'date': '2025-03-14'
+                    'date': '2025-03-14',
+                    'confirmed': True
                 },
                 # Pivot 2 - LH
                 {
@@ -403,7 +404,8 @@ class S1HistoricalTester:
                     'time': '09:30',
                     'direction': 'high',
                     'datetime': datetime(2025, 3, 14, 9, 30),
-                    'date': '2025-03-14'
+                    'date': '2025-03-14',
+                    'confirmed': True
                 },
                 # Pivot 3 - HL
                 {
@@ -412,7 +414,8 @@ class S1HistoricalTester:
                     'time': '13:30',
                     'direction': 'low',
                     'datetime': datetime(2025, 3, 14, 13, 30),
-                    'date': '2025-03-14'
+                    'date': '2025-03-14',
+                    'confirmed': True
                 },
                 # Pivot 4 - HH
                 {
@@ -421,7 +424,8 @@ class S1HistoricalTester:
                     'time': '22:30',
                     'direction': 'high',
                     'datetime': datetime(2025, 3, 14, 22, 30),
-                    'date': '2025-03-14'
+                    'date': '2025-03-14',
+                    'confirmed': True
                 }
             ]
 
