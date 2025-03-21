@@ -386,51 +386,54 @@ class S1HistoricalTester:
                 # Pivot 1 - LL
                 {
                     'type': 'LL',
-                    'price': 79902.0,
+                    'price': 79894.0,
                     'time': '00:30',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 15, 0, 30),  # VN time
-                    'date': '2025-03-15',  # VN date
+                    'datetime': datetime(2025, 3, 14, 0, 30),  # Giờ Việt Nam
+                    'date': '2025-03-14',
                     'confirmed': True
                 },
                 # Pivot 2 - LH
                 {
                     'type': 'LH',
-                    'price': 82252.0,
+                    'price': 82266.0,
                     'time': '09:30',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 15, 9, 30),  # VN time
-                    'date': '2025-03-15',  # VN date
+                    'datetime': datetime(2025, 3, 14, 9, 30),  # Giờ Việt Nam
+                    'date': '2025-03-14',
                     'confirmed': True
                 },
                 # Pivot 3 - HL
                 {
                     'type': 'HL',
-                    'price': 81716.0,
+                    'price': 81730.0,
                     'time': '13:30',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 15, 13, 30),  # VN time
-                    'date': '2025-03-15',  # VN date
+                    'datetime': datetime(2025, 3, 14, 13, 30),  # Giờ Việt Nam
+                    'date': '2025-03-14',
                     'confirmed': True
                 },
                 # Pivot 4 - HH
                 {
                     'type': 'HH',
-                    'price': 85285.0,
+                    'price': 85270.0,
                     'time': '22:30',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 15, 22, 30),  # VN time
-                    'date': '2025-03-15',  # VN date
+                    'datetime': datetime(2025, 3, 14, 22, 30),  # Giờ Việt Nam
+                    'date': '2025-03-14',
                     'confirmed': True
                 }
             ]
 
             # Thêm pivot ban đầu vào S1
             for pivot in initial_pivots:
+                # Đánh dấu pivot ban đầu bỏ qua kiểm tra khoảng cách
+                pivot['skip_spacing_check'] = True
                 pivot_data.confirmed_pivots.append(pivot)
                     
-            self.log_message("\nĐã thêm pivot ban đầu từ Trading View:", "INFO")
-            self.log_message("(Tất cả thời gian là giờ Việt Nam GMT+7)", "INFO")
+            self.log_message("\n=== Đã thêm pivot ban đầu từ Trading View ===", "INFO")
+            self.log_message("(Đây là thời gian theo múi giờ Việt Nam GMT+7)", "INFO")
+            self.log_message(f"Tổng số pivot khởi tạo: {len(initial_pivots)}", "INFO")
             for pivot in initial_pivots:
                 self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['date']} {pivot['time']})", "INFO")
 
