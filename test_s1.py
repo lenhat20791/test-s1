@@ -147,9 +147,11 @@ class S1HistoricalTester:
                 if not matching_time.empty:
                     # Đã có sẵn giờ VN
                     pivot_datetime = matching_time['datetime'].iloc[0]
+                    pivot_date = matching_time['vn_date'].iloc[0]
                 else:
                     # Nếu không tìm thấy, sử dụng datetime từ pivot
                     pivot_datetime = pivot.get('datetime', None)
+                    pivot_date = pivot.get('date', '')
                     # Nếu pivot['datetime'] là UTC, chuyển sang VN
                     if pivot_datetime and not isinstance(pivot_datetime, str):
                         # Kiểm tra nếu chưa phải giờ VN
@@ -157,7 +159,7 @@ class S1HistoricalTester:
                             vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
                             utc_dt = pivot_datetime.replace(tzinfo=pytz.UTC)
                             pivot_datetime = utc_dt.astimezone(vietnam_tz).replace(tzinfo=None)
-                
+                            pivot_date = pivot_datetime.strftime('%Y-%m-%d')
                 if pivot_datetime:
                     pivot_records.append({
                         'datetime': pivot_datetime,
@@ -196,7 +198,7 @@ class S1HistoricalTester:
                 })
                 
                 # Áp dụng định dạng cho header
-                for col_num, value in enumerate(['Datetime (VN)', 'Price', 'Pivot Type', 'Time (VN)']):
+                for col_num, value in enumerate(['Datetime (VN)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']):
                     worksheet.write(0, col_num, value, header_format)
                 
                 # Định dạng các cột
@@ -204,6 +206,7 @@ class S1HistoricalTester:
                 worksheet.set_column('B:B', 15, price_format)   # price
                 worksheet.set_column('C:C', 12)                 # pivot_type
                 worksheet.set_column('D:D', 10)                 # time_vn
+                worksheet.set_column('E:E', 12)                 # date_vn
                 
                 # Thêm thống kê
                 stats_row = len(pivot_df) + 3
@@ -462,12 +465,6 @@ class S1HistoricalTester:
                     if not pivot_date and 'datetime' in pivot and isinstance(pivot['datetime'], datetime):
                         pivot_date = pivot['datetime'].strftime('%Y-%m-%d')
                         
-                    if pivot_date:
-                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
-                    else:
-                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
-                    
-                    # Hiển thị thông tin pivot
                     if pivot_date:
                         self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
                     else:
