@@ -28,14 +28,37 @@ class S1HistoricalTester:
             self.log_message(f"❌ Lỗi kết nối Binance: {str(e)}", "ERROR")
             raise
     
-    def convert_to_vn_time(self, utc_time_str):
+    def convert_to_vn_time(self, utc_time_str_or_dt):
         """Chuyển đổi thời gian từ UTC sang VN"""
-        if isinstance(utc_time_str, str):
-            utc_time = datetime.strptime(utc_time_str, '%H:%M')
-        else:
-            utc_time = utc_time_str
-        vn_time = (utc_time + timedelta(hours=7))
-        return vn_time.strftime('%H:%M')
+        try:
+            if isinstance(utc_time_str_or_dt, str):
+                # Nếu là string format HH:MM
+                if re.match(r'^\d{2}:\d{2}$', utc_time_str_or_dt):
+                    utc_time = datetime.strptime(utc_time_str_or_dt, '%H:%M')
+                    vn_time = utc_time + timedelta(hours=7)
+                    return vn_time.strftime('%H:%M')
+                    
+                # Nếu là string format YYYY-MM-DD HH:MM:SS
+                elif re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$', utc_time_str_or_dt):
+                    utc_dt = datetime.strptime(utc_time_str_or_dt, '%Y-%m-%d %H:%M:%S')
+                    utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
+                    vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+                    vn_time = utc_dt.astimezone(vietnam_tz)
+                    return vn_time
+            elif isinstance(utc_time_str_or_dt, datetime):
+                # Nếu là datetime object, giả sử là UTC
+                utc_dt = utc_time_str_or_dt
+                if utc_dt.tzinfo is None:
+                    utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
+                vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+                vn_time = utc_dt.astimezone(vietnam_tz)
+                return vn_time
+                
+            # Trường hợp khác, trả về nguyên giá trị
+            return utc_time_str_or_dt
+        except Exception as e:
+            self.log_message(f"Lỗi chuyển đổi thời gian: {str(e)}", "ERROR")
+            return utc_time_str_or_dt
     
     def clear_log_file(self):
         """Xóa nội dung của file log để bắt đầu test mới"""
@@ -323,24 +346,24 @@ class S1HistoricalTester:
             # Reset S1
             pivot_data.clear_all()
                 
-            # Thêm pivot ban đầu
+            # Đảm bảo initial pivots sử dụng giờ Việt Nam
             initial_pivots = [
                 {
                     'type': 'HL',
                     'price': 81739.0,
-                    'time': '13:30',
+                    'time': '13:30',  # Giờ Việt Nam
                     'direction': 'low',
                     'datetime': datetime(2025, 3, 14, 13, 30)
                 },
                 {
                     'type': 'HH',
                     'price': 85274.0,
-                    'time': '22:30',
+                    'time': '22:30',  # Giờ Việt Nam
                     'direction': 'high',
                     'datetime': datetime(2025, 3, 14, 22, 30)
                 }
             ]
-                
+
             # Thêm pivot ban đầu vào S1
             for pivot in initial_pivots:
                 pivot_data.confirmed_pivots.append(pivot)
@@ -381,7 +404,8 @@ class S1HistoricalTester:
                     'high': row['high'],
                     'low': row['low']
                 }
-                pivot_data.add_price_data(price_data)
+                # Thay đổi từ add_price_data sang process_new_data
+                pivot_data.process_new_data(price_data)
                 
             # Lấy kết quả từ S1
             final_pivots = pivot_data.confirmed_pivots.copy()
@@ -408,8 +432,16 @@ class S1HistoricalTester:
             
 def main():
     try:
-        # Set thời gian hiện tại UTC
-        utc_time = "2025-03-20 09:26:57"  # Thời gian mới
+        # Lấy thời gian hiện tại từ tham số hoặc biến môi trường
+        if len(sys.argv) > 1:
+            utc_time = sys.argv[1]  # Lấy từ command line 
+        else:
+            # Lấy từ biến môi trường nếu có
+            utc_time = os.environ.get('CURRENT_UTC_TIME')
+            
+            # Nếu không có, sử dụng thời gian được cung cấp
+            if not utc_time:
+                utc_time = "2025-03-21 01:34:27"  # Thời gian từ prompt
         
         # Chuyển sang múi giờ Việt Nam (+7)
         utc = pytz.UTC
@@ -423,7 +455,8 @@ def main():
         save_log(f"UTC time: {utc_time}", DEBUG_LOG_FILE)
         save_log(f"Vietnam time: {current_time} (GMT+7)", DEBUG_LOG_FILE)
         
-        current_user = "lenhat20791"
+        # Lấy username từ tham số hoặc biến môi trường
+        current_user = os.environ.get('CURRENT_USER', 'lenhat20791')
         
         print(f"Current Date and Time (UTC): {utc_time}")
         print(f"Current User's Login: {current_user}")
