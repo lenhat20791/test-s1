@@ -432,8 +432,31 @@ class S1HistoricalTester:
                 )
                 
                 if should_log:
-                    # Hiển thị đầy đủ ngày tháng và giờ của nến (theo giờ Việt Nam)
-                    self.log_message(f"\n=== Nến {row['vn_date']} {row['vn_time']} ===", "DETAIL")
+                    # Nếu là 17:00 14/03, hiển thị (00:00 15/03/2025)
+                    vn_hour, vn_minute = map(int, row['vn_time'].split(':'))
+                    vn_date_obj = datetime.strptime(row['vn_date'], '%Y-%m-%d')
+                    
+                    # Nếu là buổi tối (17:00-23:59), hiển thị sáng hôm sau
+                    if vn_hour >= 17:
+                        reference_date = vn_date_obj + timedelta(days=1)
+                        reference_hour = vn_hour - 17
+                        reference_time = f"{reference_hour:02d}:{vn_minute:02d}"
+                    # Nếu là sáng sớm (00:00-07:00), hiển thị tối hôm trước 
+                    elif vn_hour < 7:
+                        reference_date = vn_date_obj
+                        reference_hour = vn_hour + 17
+                        reference_time = f"{reference_hour:02d}:{vn_minute:02d}"
+                        reference_date = reference_date - timedelta(days=1)
+                    # Trường hợp còn lại (07:00-16:59)
+                    else:
+                        reference_date = vn_date_obj
+                        reference_hour = vn_hour - 7
+                        reference_time = f"{reference_hour:02d}:{vn_minute:02d}"
+                    
+                    reference_date_str = reference_date.strftime("%d/%m/%Y")
+                    
+                    # Hiển thị log với format bạn yêu cầu
+                    self.log_message(f"\n=== Nến {row['vn_date']} {row['vn_time']} ({reference_time} {reference_date_str}) ===", "DETAIL")
                     self.log_message(f"Giá: ${row['price']:,.2f}")
                     if significant_change:
                         self.log_message(f"⚠️ Biến động lớn: ${row['high']:,.2f} - ${row['low']:,.2f}")
