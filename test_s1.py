@@ -160,6 +160,8 @@ class S1HistoricalTester:
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
                 # Ghi vào sheet Pivot Analysis
                 pivot_df.columns = ['Datetime (UTC)', 'Price', 'Pivot Type']
+                pivot_df['Time (VN)'] = None  # Thêm cột Time (VN) trống
+                pivot_df['Date (VN)'] = None  # Thêm cột Date (VN) trống
                 pivot_df.to_excel(writer, sheet_name='Pivot Analysis', index=False)
                 
                 workbook = writer.book
@@ -191,11 +193,17 @@ class S1HistoricalTester:
                     worksheet.write_formula(row, 3, formula, datetime_format)
                 
                 # Định dạng các cột
-                worksheet.set_column('A:A', 20, formats['datetime'])  # datetime UTC
-                worksheet.set_column('B:B', 15, formats['price'])     # price
-                worksheet.set_column('C:C', 12)                       # pivot_type
-                worksheet.set_column('D:D', 20, formats['datetime'])  # time VN
-                
+                worksheet.set_column('A:A', 20, date_format)    # datetime
+                worksheet.set_column('B:B', 15, price_format)   # price
+                worksheet.set_column('C:C', 12)                 # pivot_type
+                worksheet.set_column('D:D', 10)                 # time_vn
+                worksheet.set_column('E:E', 12)                 # date_vn
+
+                # Thêm công thức chuyển đổi múi giờ cho cột Time (VN)
+                for row in range(1, len(pivot_df) + 1):
+                    formula = f'=A{row+1}+TIME(7,0,0)'
+                    worksheet.write_formula(row, 3, formula, date_format)
+                    
                 # Thêm thống kê
                 stats_row = len(pivot_df) + 3
                 stats_format = workbook.add_format({
