@@ -142,32 +142,29 @@ class S1HistoricalTester:
             pivot_records = []
             
             for pivot in confirmed_pivots:
-                # Tìm datetime tương ứng từ DataFrame gốc bằng vn_time
-                matching_time = df[df['vn_time'] == pivot['time']]
-                if not matching_time.empty:
-                    # Đã có sẵn giờ VN
-                    pivot_datetime = matching_time['datetime'].iloc[0]
-                    pivot_date = matching_time['vn_date'].iloc[0]
-                else:
-                    # Nếu không tìm thấy, sử dụng datetime từ pivot
-                    pivot_datetime = pivot.get('datetime', None)
-                    pivot_date = pivot.get('date', '')
-                    # Nếu pivot['datetime'] là UTC, chuyển sang VN
-                    if pivot_datetime and not isinstance(pivot_datetime, str):
-                        # Kiểm tra nếu chưa phải giờ VN
-                        if pivot_datetime.hour < 7:  # Giả định rằng giờ làm việc ở VN từ 7:00
-                            vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-                            utc_dt = pivot_datetime.replace(tzinfo=pytz.UTC)
-                            pivot_datetime = utc_dt.astimezone(vietnam_tz).replace(tzinfo=None)
-                            pivot_date = pivot_datetime.strftime('%Y-%m-%d')
-                if pivot_datetime:
-                    pivot_records.append({
-                        'datetime': pivot_datetime,
-                        'price': pivot['price'],
-                        'pivot_type': pivot['type'],
-                        'time_vn': pivot['time'],
-                        'date_vn': pivot_date
-                    })
+                # Tạo UTC datetime từ time của pivot
+                pivot_time = pivot['time']  # Format: 'HH:MM'
+                hour, minute = map(int, pivot_time.split(':'))
+                
+                # Lấy ngày từ pivot hoặc từ df
+                pivot_date = pivot.get('date', df['utc_date'].iloc[0])
+                
+                # Tạo UTC datetime
+                utc_dt = datetime.strptime(f"{pivot_date} {pivot_time}", '%Y-%m-%d %H:%M')
+                
+                # Chuyển sang VN time để lấy giờ VN
+                vn_dt = utc_dt + timedelta(hours=7)
+                vn_time = vn_dt.strftime('%H:%M')
+                vn_date = vn_dt.strftime('%Y-%m-%d')
+
+                pivot_records.append({
+                    'datetime': utc_dt,          # Giữ UTC
+                    'price': pivot['price'],
+                    'pivot_type': pivot['type'],
+                    'time_vn': vn_time,          # Giờ VN
+                    'date_vn': vn_date           # Ngày VN
+                })
+
             
             # Chuyển list thành DataFrame và sắp xếp theo thời gian
             pivot_df = pd.DataFrame(pivot_records)
@@ -177,6 +174,7 @@ class S1HistoricalTester:
             # Tạo Excel file với xlsxwriter
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
                 # Ghi vào sheet Pivot Analysis
+                pivot_df.columns = ['Datetime (UTC)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']
                 pivot_df.to_excel(writer, sheet_name='Pivot Analysis', index=False)
                 
                 workbook = writer.book
@@ -198,7 +196,7 @@ class S1HistoricalTester:
                 })
                 
                 # Áp dụng định dạng cho header
-                for col_num, value in enumerate(['Datetime (VN)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']):
+                for col_num, value in enumerate(['Datetime (UTC)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']):
                     worksheet.write(0, col_num, value, header_format)
                 
                 # Định dạng các cột
@@ -393,8 +391,8 @@ class S1HistoricalTester:
                     'price': 79902.0,
                     'time': '00:30',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 14, 0, 30),
-                    'date': '2025-03-14',
+                    'datetime': datetime(2025, 3, 15, 0, 30),  # VN time
+                    'date': '2025-03-15',  # VN date
                     'confirmed': True
                 },
                 # Pivot 2 - LH
@@ -403,8 +401,8 @@ class S1HistoricalTester:
                     'price': 82252.0,
                     'time': '09:30',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 14, 9, 30),
-                    'date': '2025-03-14',
+                    'datetime': datetime(2025, 3, 15, 9, 30),  # VN time
+                    'date': '2025-03-15',  # VN date
                     'confirmed': True
                 },
                 # Pivot 3 - HL
@@ -413,8 +411,8 @@ class S1HistoricalTester:
                     'price': 81716.0,
                     'time': '13:30',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 14, 13, 30),
-                    'date': '2025-03-14',
+                    'datetime': datetime(2025, 3, 15, 13, 30),  # VN time
+                    'date': '2025-03-15',  # VN date
                     'confirmed': True
                 },
                 # Pivot 4 - HH
@@ -423,8 +421,8 @@ class S1HistoricalTester:
                     'price': 85285.0,
                     'time': '22:30',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 14, 22, 30),
-                    'date': '2025-03-14',
+                    'datetime': datetime(2025, 3, 15, 22, 30),  # VN time
+                    'date': '2025-03-15',  # VN date
                     'confirmed': True
                 }
             ]
