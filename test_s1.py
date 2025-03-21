@@ -142,31 +142,15 @@ class S1HistoricalTester:
             pivot_records = []
             
             for pivot in confirmed_pivots:
-                # Lấy thời gian từ pivot
-                pivot_time = pivot['time']  # Format: 'HH:MM'
-                
                 # Tìm bản ghi tương ứng trong df dựa trên vn_time
-                matching_row = df[df['vn_time'] == pivot_time]
-                
-                if not matching_row.empty:
-                    # Lấy UTC datetime từ dữ liệu gốc
-                    utc_datetime = pd.to_datetime(matching_row['datetime'].iloc[0])
-                    utc_time = utc_datetime.strftime('%H:%M')
-                    utc_date = utc_datetime.strftime('%Y-%m-%d')
-                    
-                    # Lấy VN time từ pivot
-                    vn_time = pivot_time
-                    vn_date = pivot.get('date')
-                    
+                matching_time = df[df['vn_time'] == pivot['time']]
+                if not matching_time.empty:
                     pivot_records.append({
-                        'datetime_utc': utc_datetime,
+                        'datetime': matching_time['datetime'].iloc[0],
                         'price': pivot['price'],
-                        'pivot_type': pivot['type'],
-                        'time_vn': vn_time,
-                        'date_vn': vn_date
+                        'pivot_type': pivot['type']
                     })
 
-            
             # Chuyển list thành DataFrame và sắp xếp theo thời gian
             pivot_df = pd.DataFrame(pivot_records)
             if not pivot_df.empty:
@@ -175,7 +159,7 @@ class S1HistoricalTester:
             # Tạo Excel file với xlsxwriter
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
                 # Ghi vào sheet Pivot Analysis
-                pivot_df.columns = ['Datetime (UTC)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']
+                pivot_df.columns = ['Datetime (UTC)', 'Price', 'Pivot Type']
                 pivot_df.to_excel(writer, sheet_name='Pivot Analysis', index=False)
                 
                 workbook = writer.book
@@ -196,16 +180,21 @@ class S1HistoricalTester:
                     'bg_color': '#D9D9D9'
                 })
                 
-                # Áp dụng định dạng cho header
-                for col_num, value in enumerate(['Datetime (UTC)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']):
-                    worksheet.write(0, col_num, value, header_format)
+                # Thêm header cho Time (VN)
+                worksheet.write(0, 3, 'Time (VN)', header_format)
+                
+                # Thêm công thức chuyển đổi múi giờ VN
+                row_start = 1
+                last_row = len(pivot_df)
+                for row in range(row_start, last_row + 1):
+                    formula = f'=A{row+1}+TIME(7,0,0)'
+                    worksheet.write_formula(row, 3, formula, datetime_format)
                 
                 # Định dạng các cột
-                worksheet.set_column('A:A', 20, date_format)    # datetime
-                worksheet.set_column('B:B', 15, price_format)   # price
-                worksheet.set_column('C:C', 12)                 # pivot_type
-                worksheet.set_column('D:D', 10)                 # time_vn
-                worksheet.set_column('E:E', 12)                 # date_vn
+                worksheet.set_column('A:A', 20, formats['datetime'])  # datetime UTC
+                worksheet.set_column('B:B', 15, formats['price'])     # price
+                worksheet.set_column('C:C', 12)                       # pivot_type
+                worksheet.set_column('D:D', 20, formats['datetime'])  # time VN
                 
                 # Thêm thống kê
                 stats_row = len(pivot_df) + 3
@@ -220,7 +209,7 @@ class S1HistoricalTester:
                 worksheet.write(stats_row + 1, 1, len(pivot_df), price_format)
                 
                 # Thống kê theo loại pivot
-                pivot_counts = pivot_df['pivot_type'].value_counts() if not pivot_df.empty else pd.Series()
+                pivot_counts = pivot_df['Pivot Type'].value_counts() if not pivot_df.empty else pd.Series()
                 worksheet.write(stats_row + 2, 0, "Phân bố pivot:", stats_format)
                 
                 row = stats_row + 3
