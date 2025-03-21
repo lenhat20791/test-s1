@@ -148,7 +148,9 @@ class S1HistoricalTester:
                     pivot_records.append({
                         'datetime': matching_time['datetime'].iloc[0],
                         'price': pivot['price'],
-                        'pivot_type': pivot['type']
+                        'type': pivot['type'],
+                        'time_vn': pivot['time'],
+                        'date_vn': matching_time['vn_date'].iloc[0]
                     })
 
             # Chuyển list thành DataFrame và sắp xếp theo thời gian
@@ -159,9 +161,7 @@ class S1HistoricalTester:
             # Tạo Excel file với xlsxwriter
             with pd.ExcelWriter('test_results.xlsx', engine='xlsxwriter') as writer:
                 # Ghi vào sheet Pivot Analysis
-                pivot_df.columns = ['Datetime (UTC)', 'Price', 'Pivot Type']
-                pivot_df['Time (VN)'] = None  # Thêm cột Time (VN) trống
-                pivot_df['Date (VN)'] = None  # Thêm cột Date (VN) trống
+                pivot_df.columns = ['Datetime (UTC)', 'Price', 'Pivot Type', 'Time (VN)', 'Date (VN)']
                 pivot_df.to_excel(writer, sheet_name='Pivot Analysis', index=False)
                 
                 workbook = writer.book
@@ -190,7 +190,7 @@ class S1HistoricalTester:
                 last_row = len(pivot_df)
                 for row in range(row_start, last_row + 1):
                     formula = f'=A{row+1}+TIME(7,0,0)'
-                    worksheet.write_formula(row, 3, formula, datetime_format)
+                    worksheet.write_formula(row, 3, formula, date_format)
                 
                 # Định dạng các cột
                 worksheet.set_column('A:A', 20, date_format)    # datetime
