@@ -131,7 +131,7 @@ class S1HistoricalTester:
         Lưu kết quả test vào Excel và vẽ biểu đồ
         
         Parameters:
-        df (DataFrame): DataFrame chứa dữ liệu gốc với các cột datetime, time, high, low, price
+        df (DataFrame): DataFrame chứa dữ liệu gốc với các cột datetime, vn_time, high, low, price
         results (list): Danh sách các pivot đã được xác nhận
         """
         try:
@@ -142,19 +142,28 @@ class S1HistoricalTester:
             pivot_records = []
             
             for pivot in confirmed_pivots:
-                # Tìm datetime tương ứng từ DataFrame gốc
-                matching_time = df[df['time'] == pivot['time']]
+                # Tìm datetime tương ứng từ DataFrame gốc bằng vn_time
+                matching_time = df[df['vn_time'] == pivot['time']]
                 if not matching_time.empty:
+                    # Đã có sẵn giờ VN
                     pivot_datetime = matching_time['datetime'].iloc[0]
                 else:
-                    # Nếu không tìm thấy trong df, sử dụng datetime từ pivot
+                    # Nếu không tìm thấy, sử dụng datetime từ pivot
                     pivot_datetime = pivot.get('datetime', None)
+                    # Nếu pivot['datetime'] là UTC, chuyển sang VN
+                    if pivot_datetime and not isinstance(pivot_datetime, str):
+                        # Kiểm tra nếu chưa phải giờ VN
+                        if pivot_datetime.hour < 7:  # Giả định rằng giờ làm việc ở VN từ 7:00
+                            vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+                            utc_dt = pivot_datetime.replace(tzinfo=pytz.UTC)
+                            pivot_datetime = utc_dt.astimezone(vietnam_tz).replace(tzinfo=None)
                 
                 if pivot_datetime:
                     pivot_records.append({
                         'datetime': pivot_datetime,
                         'price': pivot['price'],
-                        'pivot_type': pivot['type']
+                        'pivot_type': pivot['type'],
+                        'time_vn': pivot['time']  # Lưu lại thời gian dạng HH:MM
                     })
             
             # Chuyển list thành DataFrame và sắp xếp theo thời gian
@@ -186,13 +195,14 @@ class S1HistoricalTester:
                 })
                 
                 # Áp dụng định dạng cho header
-                for col_num, value in enumerate(['Datetime', 'Price', 'Pivot Type']):
+                for col_num, value in enumerate(['Datetime (VN)', 'Price', 'Pivot Type', 'Time (VN)']):
                     worksheet.write(0, col_num, value, header_format)
                 
                 # Định dạng các cột
                 worksheet.set_column('A:A', 20, date_format)    # datetime
                 worksheet.set_column('B:B', 15, price_format)   # price
                 worksheet.set_column('C:C', 12)                 # pivot_type
+                worksheet.set_column('D:D', 10)                 # time_vn
                 
                 # Thêm thống kê
                 stats_row = len(pivot_df) + 3
@@ -237,12 +247,12 @@ class S1HistoricalTester:
                 
                 # Định dạng biểu đồ
                 chart.set_title({
-                    'name': 'Pivot Points Analysis',
+                    'name': 'Pivot Points Analysis (Vietnam Time)',
                     'name_font': {'size': 14, 'bold': True}
                 })
                 
                 chart.set_x_axis({
-                    'name': 'Time',
+                    'name': 'Time (Vietnam)',
                     'num_format': 'dd/mm/yyyy\nhh:mm',
                     'label_position': 'low',
                     'major_unit': 1,
@@ -264,15 +274,21 @@ class S1HistoricalTester:
                 # Chèn biểu đồ vào worksheet
                 worksheet.insert_chart('E2', chart)
                 
-                # Thêm sheet Data để lưu dữ liệu gốc
-                df_to_save = df[['datetime', 'time', 'high', 'low', 'price']].copy()
+                # Thêm sheet Data để lưu dữ liệu gốc - Chỉ lưu dữ liệu với thời gian VN
+                df_to_save = df[['datetime', 'vn_time', 'high', 'low', 'price']].copy()
+                # Đổi tên cột cho rõ ràng
+                df_to_save = df_to_save.rename(columns={'vn_time': 'time_vn'})
                 df_to_save.to_excel(writer, sheet_name='Raw Data', index=False)
                 
                 # Định dạng sheet Data
                 worksheet_data = writer.sheets['Raw Data']
                 worksheet_data.set_column('A:A', 20, date_format)  # datetime
-                worksheet_data.set_column('B:B', 10)               # time
+                worksheet_data.set_column('B:B', 10)               # time_vn
                 worksheet_data.set_column('C:E', 15, price_format) # high, low, price
+                
+                # Thêm tiêu đề cột rõ ràng hơn
+                for col_num, value in enumerate(['Datetime (VN)', 'Time (VN)', 'High', 'Low', 'Price']):
+                    worksheet_data.write(0, col_num, value, header_format)
                 
                 # Log kết quả
                 self.log_message("\nĐã lưu kết quả test vào file test_results.xlsx", "SUCCESS")
@@ -331,12 +347,24 @@ class S1HistoricalTester:
             # Xử lý timestamp và timezone
             df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
             vietnam_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+            # Lưu thời gian UTC để theo dõi
+            df['utc_time'] = df['datetime'].dt.strftime('%H:%M')
+            # Chuyển sang múi giờ Việt Nam
             df['datetime'] = df['datetime'].dt.tz_convert(vietnam_tz)
+            # Lưu thời gian Việt Nam
+            df['vn_time'] = df['datetime'].dt.strftime('%H:%M')
+            # Loại bỏ timezone để tránh vấn đề với Excel
             df['datetime'] = df['datetime'].dt.tz_localize(None)
-            df['time'] = df['datetime'].dt.strftime('%H:%M')
 
+            # Ghi log so sánh thời gian
+            self.log_message("\n=== Chuyển đổi múi giờ ===", "INFO")
+            self.log_message("| UTC Time | Vietnam Time |", "INFO")
+            self.log_message("|----------|--------------|", "INFO")
+            for idx, row in df.head(5).iterrows():  # Hiển thị 5 hàng đầu tiên
+                self.log_message(f"| {row['utc_time']} | {row['vn_time']} |", "INFO")
+    
             # Chọn và format dữ liệu cần thiết
-            df = df[['datetime', 'time', 'high', 'low', 'close']]
+            df = df[['datetime', 'utc_time', 'vn_time', 'high', 'low', 'close']]
             df = df.rename(columns={'close': 'price'})
             for col in ['high', 'low', 'price']:
                 df[col] = df[col].astype(float)
@@ -391,7 +419,7 @@ class S1HistoricalTester:
                 )
                 
                 if should_log:
-                    self.log_message(f"\n=== Nến {row['time']} ===", "DETAIL")
+                    self.log_message(f"\n=== Nến {row['vn_time']} ===", "DETAIL")  # Sử dụng vn_time
                     self.log_message(f"Giá: ${row['price']:,.2f}")
                     if significant_change:
                         self.log_message(f"⚠️ Biến động lớn: ${row['high']:,.2f} - ${row['low']:,.2f}")
@@ -399,7 +427,7 @@ class S1HistoricalTester:
                 
                 # Cung cấp dữ liệu cho S1
                 price_data = {
-                    'time': row['time'],
+                    'time': row['vn_time'],  # Sử dụng cột vn_time thay vì time
                     'price': row['price'],
                     'high': row['high'],
                     'low': row['low']
