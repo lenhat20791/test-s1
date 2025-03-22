@@ -530,21 +530,21 @@ class S1HistoricalTester:
             if final_pivots:
                 self.log_message("\nDanh sách pivot S1 đã xác nhận:")
                 for pivot in final_pivots:
-                    # Tìm thời gian Vietnam chính xác từ DataFrame
-                    if 'time' in pivot:
-                        pivot_time = pivot['time']
-                        matching_rows = df[df['vn_time'] == pivot_time]
-                        
-                        if not matching_rows.empty:
-                            # Nếu tìm thấy nến tương ứng trong dữ liệu, lấy thời gian VN đầy đủ
-                            vn_datetime = matching_rows['vn_date_time'].iloc[0]
-                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({vn_datetime})")
-                        elif 'time_vn' in pivot:
-                            # Nếu có sẵn time_vn, sử dụng nó
-                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time_vn']})")
-                        else:
-                            # Fallback cho các trường hợp khác
-                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")                        
+                    # Log với thời gian Việt Nam nhất quán
+                    if 'vn_datetime' in pivot:
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} (VN: {pivot['vn_datetime']})")
+                    elif 'utc_datetime' in pivot:
+                        # Chuyển từ UTC sang VN để hiển thị
+                        try:
+                            utc_dt = datetime.strptime(pivot['utc_datetime'], '%Y-%m-%d %H:%M')
+                            vn_dt = utc_dt + timedelta(hours=7)
+                            vn_datetime = vn_dt.strftime('%Y-%m-%d %H:%M')
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} (VN: {vn_datetime}, UTC: {pivot['utc_datetime']})")
+                        except:
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} (UTC: {pivot['utc_datetime']})")
+                    else:
+                        # Fallback
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot.get('time', 'unknown time')})")                        
             # Lưu kết quả vào Excel
             self.save_test_results(df, final_pivots)
                 
