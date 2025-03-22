@@ -391,7 +391,8 @@ class S1HistoricalTester:
                     'direction': 'low',
                     'datetime': datetime(2025, 3, 14, 0, 30),  # Giờ Việt Nam
                     'date': '2025-03-14',
-                    'confirmed': True
+                    'confirmed': True,
+                    'formatted_time': '2025-03-14 00:30'
                 },
                 # Pivot 2 - LH
                 {
@@ -401,7 +402,8 @@ class S1HistoricalTester:
                     'direction': 'high',
                     'datetime': datetime(2025, 3, 14, 9, 30),  # Giờ Việt Nam
                     'date': '2025-03-14',
-                    'confirmed': True
+                    'confirmed': True,
+                    'formatted_time': '2025-03-14 09:30'
                 },
                 # Pivot 3 - HL
                 {
@@ -411,7 +413,8 @@ class S1HistoricalTester:
                     'direction': 'low',
                     'datetime': datetime(2025, 3, 14, 13, 30),  # Giờ Việt Nam
                     'date': '2025-03-14',
-                    'confirmed': True
+                    'confirmed': True,
+                    'formatted_time': '2025-03-14 13:30'
                 },
                 # Pivot 4 - HH
                 {
@@ -421,21 +424,30 @@ class S1HistoricalTester:
                     'direction': 'high',
                     'datetime': datetime(2025, 3, 14, 22, 30),  # Giờ Việt Nam
                     'date': '2025-03-14',
-                    'confirmed': True
+                    'confirmed': True,
+                    'formatted_time': '2025-03-14 22:30'
                 }
             ]
 
-            # Thêm pivot ban đầu vào S1
-            for pivot in initial_pivots:
-                # Đánh dấu pivot ban đầu bỏ qua kiểm tra khoảng cách
-                pivot['skip_spacing_check'] = True
-                pivot_data.confirmed_pivots.append(pivot)
-                    
+            # Khởi tạo pivot ban đầu theo thứ tự thời gian và đảm bảo khoảng cách
+            sorted_initial_pivots = sorted(initial_pivots, key=lambda x: datetime.strptime(x["time"], "%H:%M"))
+
+            # Ghi log xác nhận pivot ban đầu
             self.log_message("\n=== Đã thêm pivot ban đầu từ Trading View ===", "INFO")
             self.log_message("(Đây là thời gian theo múi giờ Việt Nam GMT+7)", "INFO")
-            self.log_message(f"Tổng số pivot khởi tạo: {len(initial_pivots)}", "INFO")
-            for pivot in initial_pivots:
-                self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['date']} {pivot['time']})", "INFO")
+            self.log_message(f"Tổng số pivot khởi tạo: {len(sorted_initial_pivots)}", "INFO")
+
+            pivot_data.confirmed_pivots.clear()  # Xóa toàn bộ pivot hiện có
+            added_count = 0
+
+            for pivot in sorted_initial_pivots:
+                # Đánh dấu pivot ban đầu bỏ qua kiểm tra khoảng cách
+                pivot['skip_spacing_check'] = True
+                
+                # Sử dụng API để thêm pivot
+                pivot_data.confirmed_pivots.append(pivot)
+                added_count += 1
+                self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['formatted_time']})", "INFO")
 
             # Cung cấp dữ liệu cho S1
             self.log_message("\nBắt đầu cung cấp dữ liệu cho S1...", "INFO")
@@ -498,7 +510,7 @@ class S1HistoricalTester:
                 pivot_data.process_new_data(price_data)
                 
             # Lấy kết quả từ S1
-            final_pivots = pivot_data.confirmed_pivots.copy()
+            final_pivots = pivot_data.get_all_pivots()  # Sử dụng get_all_pivots để lấy pivot đã format
                 
             # Log kết quả cuối cùng
             self.log_message("\n=== Kết quả test S1 ===", "SUMMARY")
@@ -508,14 +520,16 @@ class S1HistoricalTester:
             if final_pivots:
                 self.log_message("\nDanh sách pivot S1 đã xác nhận:")
                 for pivot in final_pivots:
-                    pivot_date = pivot.get('date', '')
-                    if not pivot_date and 'datetime' in pivot and isinstance(pivot['datetime'], datetime):
-                        pivot_date = pivot['datetime'].strftime('%Y-%m-%d')
-                        
-                    if pivot_date:
-                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
+                    # Sử dụng formatted_time đã được chuẩn bị
+                    if 'formatted_time' in pivot:
+                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['formatted_time']})")
                     else:
-                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
+                        # Fallback nếu không có formatted_time
+                        pivot_date = pivot.get('date', '')
+                        if pivot_date:
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
+                        else:
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
                         
             # Lưu kết quả vào Excel
             self.save_test_results(df, final_pivots)
