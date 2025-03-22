@@ -417,25 +417,46 @@ class S1HistoricalTester:
                 }
 ]
 
-            # Khởi tạo pivot ban đầu theo thứ tự thời gian và đảm bảo khoảng cách
-            sorted_initial_pivots = sorted(initial_pivots, key=lambda x: datetime.strptime(x["time"], "%H:%M"))
-
             # Ghi log xác nhận pivot ban đầu
             self.log_message("\n=== Đã thêm pivot ban đầu từ Trading View ===", "INFO")
             self.log_message("(Đây là thời gian theo múi giờ Việt Nam GMT+7)", "INFO")
-            self.log_message(f"Tổng số pivot khởi tạo: {len(sorted_initial_pivots)}", "INFO")
+            self.log_message(f"Tổng số pivot khởi tạo: {len(initial_pivots)}", "INFO")
 
-            pivot_data.confirmed_pivots.clear()  # Xóa toàn bộ pivot hiện có
-            added_count = 0
-
-            for pivot in sorted_initial_pivots:
-                # Đánh dấu pivot ban đầu bỏ qua kiểm tra khoảng cách
-                pivot['skip_spacing_check'] = True
+            # Thêm phương thức add_initial_trading_view_pivots vào PivotData để xử lý đúng múi giờ
+            if hasattr(pivot_data, 'add_initial_trading_view_pivots'):
+                # Sử dụng phương thức mới nếu có
+                pivot_data.add_initial_trading_view_pivots(initial_pivots)
                 
-                # Sử dụng API để thêm pivot
-                pivot_data.confirmed_pivots.append(pivot)
-                added_count += 1
-                self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['formatted_time']})", "INFO")
+                # Log các pivot đã thêm
+                for pivot in initial_pivots:
+                    vn_datetime = f"{pivot['vn_date']} {pivot['vn_time']}"
+                    self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} (VN: {vn_datetime})", "INFO")
+            else:
+                # Fallback nếu không có phương thức mới
+                self.log_message("⚠️ WARNING: Không tìm thấy phương thức add_initial_trading_view_pivots", "WARNING")
+                self.log_message("⚠️ Thêm pivot theo cách thủ công và chuyển đổi múi giờ", "WARNING")
+                
+                pivot_data.confirmed_pivots.clear()  # Xóa toàn bộ pivot hiện có
+                
+                for pivot in initial_pivots:
+                    # Chuyển đổi thời gian Việt Nam sang UTC
+                    vn_datetime = f"{pivot['vn_date']} {pivot['vn_time']}"
+                    vn_dt = datetime.strptime(vn_datetime, '%Y-%m-%d %H:%M')
+                    utc_dt = vn_dt - timedelta(hours=7)
+                    
+                    # Tạo pivot với thời gian UTC
+                    utc_pivot = pivot.copy()
+                    utc_pivot['time'] = utc_dt.strftime('%H:%M')  # Thời gian UTC
+                    utc_pivot['utc_date'] = utc_dt.strftime('%Y-%m-%d')
+                    utc_pivot['utc_datetime'] = utc_dt.strftime('%Y-%m-%d %H:%M')
+                    utc_pivot['vn_datetime'] = vn_datetime
+                    utc_pivot['skip_spacing_check'] = True
+                    
+                    # Thêm pivot vào S1
+                    pivot_data.confirmed_pivots.append(utc_pivot)
+                    
+                    # Log pivot đã thêm
+                    self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} (VN: {vn_datetime}, UTC: {utc_pivot['utc_datetime']})", "INFO")
 
             # Cung cấp dữ liệu cho S1
             self.log_message("\nBắt đầu cung cấp dữ liệu cho S1...", "INFO")
@@ -488,11 +509,12 @@ class S1HistoricalTester:
                 
                 # Cung cấp dữ liệu cho S1
                 price_data = {
-                    'time': row['vn_time'],  # Thời gian Việt Nam
+                    'time': row['vn_time'],       # Thời gian Việt Nam
+                    'vn_time': row['vn_time'],    # Đánh dấu rõ là thời gian Việt Nam
                     'price': row['price'],
                     'high': row['high'],
                     'low': row['low'],
-                    'date': row['vn_date']  # Thêm thông tin ngày
+                    'vn_date': row['vn_date']     # Đánh dấu rõ là ngày Việt Nam
                 }
                 # Thay đổi từ add_price_data sang process_new_data
                 pivot_data.process_new_data(price_data)
