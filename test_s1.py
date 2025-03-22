@@ -383,51 +383,39 @@ class S1HistoricalTester:
                 
             # Đảm bảo initial pivots sử dụng giờ Việt Nam
             initial_pivots = [
-                # Pivot 1 - LL
                 {
                     'type': 'LL',
                     'price': 79894.0,
-                    'time': '00:30',
+                    'vn_time': '00:30',
+                    'vn_date': '2025-03-14',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 14, 0, 30),  # Giờ Việt Nam
-                    'date': '2025-03-14',
-                    'confirmed': True,
-                    'formatted_time': '2025-03-14 00:30'
+                    'confirmed': True
                 },
-                # Pivot 2 - LH
                 {
                     'type': 'LH',
                     'price': 82266.0,
-                    'time': '09:30',
+                    'vn_time': '09:30',
+                    'vn_date': '2025-03-14',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 14, 9, 30),  # Giờ Việt Nam
-                    'date': '2025-03-14',
-                    'confirmed': True,
-                    'formatted_time': '2025-03-14 09:30'
+                    'confirmed': True
                 },
-                # Pivot 3 - HL
                 {
                     'type': 'HL',
                     'price': 81730.0,
-                    'time': '13:30',
+                    'vn_time': '13:30',
+                    'vn_date': '2025-03-14',
                     'direction': 'low',
-                    'datetime': datetime(2025, 3, 14, 13, 30),  # Giờ Việt Nam
-                    'date': '2025-03-14',
-                    'confirmed': True,
-                    'formatted_time': '2025-03-14 13:30'
+                    'confirmed': True
                 },
-                # Pivot 4 - HH
                 {
                     'type': 'HH',
                     'price': 85270.0,
-                    'time': '22:30',
+                    'vn_time': '22:30',
+                    'vn_date': '2025-03-14',
                     'direction': 'high',
-                    'datetime': datetime(2025, 3, 14, 22, 30),  # Giờ Việt Nam
-                    'date': '2025-03-14',
-                    'confirmed': True,
-                    'formatted_time': '2025-03-14 22:30'
+                    'confirmed': True
                 }
-            ]
+]
 
             # Khởi tạo pivot ban đầu theo thứ tự thời gian và đảm bảo khoảng cách
             sorted_initial_pivots = sorted(initial_pivots, key=lambda x: datetime.strptime(x["time"], "%H:%M"))
