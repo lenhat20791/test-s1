@@ -492,7 +492,7 @@ class S1HistoricalTester:
                     reference_date_str = reference_date.strftime("%d/%m/%Y")
                     
                     # Hiển thị log với format bạn yêu cầu
-                    self.log_message(f"\n=== Nến {row['vn_date']} {row['vn_time']} ({reference_time} {reference_date_str}) ===", "DETAIL")
+                    self.log_message(f"\n=== Nến {row['utc_date']} {row['utc_time']} ({row['utc_date']} {row['utc_time']} UTC) ===", "DETAIL")
                     self.log_message(f"Giá: ${row['price']:,.2f}")
                     if significant_change:
                         self.log_message(f"⚠️ Biến động lớn: ${row['high']:,.2f} - ${row['low']:,.2f}")
@@ -516,21 +516,25 @@ class S1HistoricalTester:
             self.log_message("\n=== Kết quả test S1 ===", "SUMMARY")
             self.log_message(f"Tổng số nến đã xử lý: {len(df)}")
             self.log_message(f"Tổng số pivot được S1 xác nhận: {len(final_pivots)}")
-                
+
             if final_pivots:
                 self.log_message("\nDanh sách pivot S1 đã xác nhận:")
                 for pivot in final_pivots:
-                    # Sử dụng formatted_time đã được chuẩn bị
-                    if 'formatted_time' in pivot:
-                        self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['formatted_time']})")
-                    else:
-                        # Fallback nếu không có formatted_time
-                        pivot_date = pivot.get('date', '')
-                        if pivot_date:
-                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot_date} {pivot['time']})")
-                        else:
-                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")
+                    # Tìm thời gian Vietnam chính xác từ DataFrame
+                    if 'time' in pivot:
+                        pivot_time = pivot['time']
+                        matching_rows = df[df['vn_time'] == pivot_time]
                         
+                        if not matching_rows.empty:
+                            # Nếu tìm thấy nến tương ứng trong dữ liệu, lấy thời gian VN đầy đủ
+                            vn_datetime = matching_rows['vn_date_time'].iloc[0]
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({vn_datetime})")
+                        elif 'time_vn' in pivot:
+                            # Nếu có sẵn time_vn, sử dụng nó
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time_vn']})")
+                        else:
+                            # Fallback cho các trường hợp khác
+                            self.log_message(f"- {pivot['type']} tại ${pivot['price']:,.2f} ({pivot['time']})")                        
             # Lưu kết quả vào Excel
             self.save_test_results(df, final_pivots)
                 
