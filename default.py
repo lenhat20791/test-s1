@@ -5,8 +5,11 @@ from facefusion.uis.components import about, age_modifier_options, common_option
 
 
 def pre_check() -> bool:
-	return True
-
+	print("[DEBUG] pre_check() in default layout OK")
+    return True
+    
+def init() -> None:
+    print("[DEBUG] init() in default layout")
 
 def render() -> gradio.Blocks:
 	with gradio.Blocks() as layout:
