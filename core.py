@@ -65,6 +65,7 @@ def route(args : Args) -> None:
 
 		if not common_pre_check() or not processors_pre_check():
 			return conditional_exit(2)
+		print(f"[DEBUG] UI Layouts path: {state_manager.get_item('ui_layouts')}")
 		for ui_layout in ui.get_ui_layouts_modules(state_manager.get_item('ui_layouts')):
 			if not ui_layout.pre_check():
 				return conditional_exit(2)
@@ -481,3 +482,16 @@ def is_process_stopping() -> bool:
 		process_manager.end()
 		logger.info(wording.get('processing_stopped'), __name__)
 	return process_manager.is_pending()
+import importlib
+from types import ModuleType
+
+def get_ui_layouts_modules(layouts: list[str]) -> list[ModuleType]:
+	modules = []
+	for layout in layouts:
+		try:
+			print(f"[DEBUG] Importing layout module: facefusion.uis.layouts.{layout}")
+			module = importlib.import_module(f'facefusion.uis.layouts.{layout}')
+			modules.append(module)
+		except Exception as e:
+			print(f"[ERROR] Failed to import layout '{layout}': {e}")
+	return modules
