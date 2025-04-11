@@ -1,92 +1,0 @@
-﻿Mục 3. Tiêu chuẩn đánh giá về kỹ thuật
-Sử dụng tiêu chí đạt/không để đánh giá về kỹ thuật.
-     Tiêu chí tổng quát được đánh giá là đạt khi tất cả các tiêu chí chi tiết cơ bản được đánh giá là đạt và các tiêu chí chi tiết không cơ bản được đánh giá là đạt hoặc chấp nhận được.
-     E-HSDT được đánh giá là đáp ứng yêu cầu về kỹ thuật khi có tất cả các tiêu chí tổng quát đều được đánh giá là đạt.
-
-Nội dung yêu cầuMức độ đáp ứng1. Mức độ hiểu biết về tính chất và mục đích công việc
-Hiểu rõ mục đích gói thầuHiểu rõ về gói thầu và trình bày chi tiết về từng vấn đềĐạtKhông trình bày hiểu biết về gói thầu
-hoặc có trình bày nhưng sơ sài hoặc thiếu nội dung cơ bảnKhông đạt2. Mức độ đáp ứng các yêu cầu về tiêu chuẩn thực hiện dịch vụ
-
- Giấy	phép	hoạt	động dịch vụ bảo vệNhà thầu phải cung cấp Giấy chứng nhận đủ điều kiện về an ninh, trật tự do cơ quan Công an có thẩm quyền cấp.
-ĐạtNhà thầu không cung cấp Giấy chứng nhận đủ điều kiện về an ninh, trật tự do cơ quan Công an có thẩm quyền cấp.Không đạt
-
-
-
-Bảo hiểm trách nhiệm trong việc cung cấp dịch vụNhà thầu có cam kết cung cấp giấy chứng nhận bảo hiểm trách nhiệm pháp lý đối với nghề nghiệp và dân sự (hoặc tương đương) cho bên thứ 3 với giá trị tối thiểu 1 tỷ đồng/1 vụ, áp dụng cho tất cả số vụ phát sinh trong suốt thời gian bảo hiểm và bảo hiểm có hiệu lực trong quá trình thực hiện hợp đồng cung cấp dịch vụ của nhà thầu.
-
-
-
-ĐạtNhà thầu không có cam kết cung cấp giấy chứng nhận bảo hiểmKhông đạt
-
-Trách nhiệm của nhà thầuNhà thầu có đầy đủ cam kết đáp ứng theo yêu cầu tại Mục 3.3, Chương V, E- HSMT
-ĐạtNhà thầu không đáp ứng một trong các yêu cầu tại Mục 3.3, Chương V, E- HSMTKhông đạt3. Tính hợp lý và khả thi của kế hoạch, các giải pháp kỹ thuật, biện pháp tổ chức cung cấp dịch vụ:
-
-Phương án tổ chức cung cấp dịch vụ bảo vệ
-- Đánh giá chung về vị trí, yêu cầu. Các tình huống về an ninh trật tự có thể có khả năng cao dễ xảy ra.
-- Các vật dụng, phương tiện, công cụ hỗ trợ, trang phục mà đơn vị cung cấp dịch vụ bảo vệ phải trang bị cho lực lượng bảo vệ.
-- Có thời gian biểu, nhân lực làm việc cho từng vị trí.
-- Có phương án, cơ chế phối hợp giữa chủ đầu tư và nhà thầu.
-Có đề xuất phương án bảo vệ cụ thể chi tiết, phù hợp theo yêu cầu tại Mục 3.1 và Mục 3.2, Chương V, E-HSMT
-
-Đạt
-
-
-
-
-Không có đề xuất về phương án bảo vệ chi tiết, phù hợp với yêu cầu tại Mục 3.1 và Mục 3.2, Chương V, E-HSMT
-
-
-
-
-Không đạt
-
-Phương án triển khaiNhà thầu có đề xuất đầy đủ, cụ thể các giải pháp theo yêu cầu tại Mục 3.4, Chương V, E-HSMT
-ĐạtNhà thầu không có giải pháp của một trong các yêu cầu tại Mục 3.4, Chương V, E-HSMTKhông đạt4. Tiến độ:
-
-Nêu rõ Thời gian thực hiện dịch vụĐề xuất thời gian thực hiện dịch vụ không vượt quá thời gian quy định trong E-HSMT.
-ĐạtĐề xuất về thời gian thực hiện dịch vụ vượt quá thời gian quy định trong E- HSMT.Không đạt5. Uy tín của nhà thầu:Uy tín của nhà thầu thông qua việc tham dự thầu (không thương thảo hợp đồng, có quyết định trúng thầu nhưng không tiến hành hoàn thiện, ký kết hợp đồng) và thực hiện các hợp đồng tương
-Nhà thầu có cam kết không có hợp đồng nào không thực hiện thương thảo, có quyết định trúng thầu nhưng không tiến hành hoàn thiện, ký kết hợp đồng, không có hợp đồng nào chậm tiến độ hoặc bỏ dở do lỗi của nhà thầu
-
-
-Đạt
-
-tự	trước	đó	(từ 01/01/2021 trở lại đây)Không có cam kết hoặc có hồ sơ, tài liệu liên quan đến việc nhà thầu vi phạm các quy định nêu trênKhông đạt
-Kết luậnTất cả các tiêu chí được xác định là đạtĐạtMột trong số tất cả các tiêu chí trên được xác định là không đạtKhông đạt     Mục 4. Tiêu chuẩn đánh giá về tài chính Phương pháp giá thấp nhất1:
-Cách xác định giá thấp nhất theo các bước sau đây:
-Bước 1. Xác định giá dự thầu, trừ đi giá trị giảm giá (nếu có); Bước 2. Xác định ưu đãi (nếu có) theo quy định tại Mục 28 E-CDNT
-     Bước 3. Xếp hạng nhà thầu: E-HSDT có giá dự thầu, trừ đi giá trị giảm giá (nếu có), sau ưu đãi (nếu có) thấp nhất được xếp hạng thứ nhất.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1 Trường hợp áp dụng phương pháp này thì xóa bỏ Khoản 4.2. Phương pháp giá đánh giá và Khoản 4.3. Phương pháp kết hợp giữa kỹ thuật và giá.
-
-
