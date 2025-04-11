@@ -1,5 +1,6 @@
 import tempfile
 from argparse import ArgumentParser, HelpFormatter
+import gradio as gr
 
 import facefusion.choices
 from facefusion import config, metadata, state_manager, wording
@@ -264,33 +265,278 @@ def collect_job_program() -> ArgumentParser:
 	return ArgumentParser(parents= [ create_execution_program(), create_download_providers_program(), create_memory_program(), create_misc_program() ], add_help = False)
 
 
+from argparse import ArgumentParser
+
+def create_output_quality_program():
+    return gr.Radio(choices=["Low", "Medium", "High"], label="Output Quality")
+
+def create_crop_target_component():
+    return gr.Checkbox(label="Crop Target Face", value=False)
+
+def create_output_quality_component():
+    return gr.Radio(choices=["Low", "Medium", "High"], label="Output Quality", value="High")
+
+def create_face_enhancer_component():
+    return gr.Checkbox(label="Face Enhancer", value=False)
+
+def create_frame_enhancer_component():
+    return gr.Checkbox(label="Frame Enhancer", value=False)
+
+def create_preview_component():
+    return gr.Checkbox(label="Show Preview", value=True)
+
 def create_program() -> ArgumentParser:
-	program = ArgumentParser(formatter_class = create_help_formatter_large, add_help = False)
-	program._positionals.title = 'commands'
-	program.add_argument('-v', '--version', version = metadata.get('name') + ' ' + metadata.get('version'), action = 'version')
-	sub_program = program.add_subparsers(dest = 'command')
-	# general
-	sub_program.add_parser('run', help = wording.get('help.run'), parents = [ create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), create_source_paths_program(), create_target_path_program(), create_output_path_program(), collect_step_program(), create_uis_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('headless-run', help = wording.get('help.headless_run'), parents = [ create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), create_source_paths_program(), create_target_path_program(), create_output_path_program(), collect_step_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('batch-run', help = wording.get('help.batch_run'), parents = [ create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), create_source_pattern_program(), create_target_pattern_program(), create_output_pattern_program(), collect_step_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('force-download', help = wording.get('help.force_download'), parents = [ create_download_providers_program(), create_download_scope_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	# job manager
-	sub_program.add_parser('job-list', help = wording.get('help.job_list'), parents = [ create_job_status_program(), create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-create', help = wording.get('help.job_create'), parents = [ create_job_id_program(), create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-submit', help = wording.get('help.job_submit'), parents = [ create_job_id_program(), create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-submit-all', help = wording.get('help.job_submit_all'), parents = [ create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-delete', help = wording.get('help.job_delete'), parents = [ create_job_id_program(), create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-delete-all', help = wording.get('help.job_delete_all'), parents = [ create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-add-step', help = wording.get('help.job_add_step'), parents = [ create_job_id_program(), create_config_path_program(), create_jobs_path_program(), create_source_paths_program(), create_target_path_program(), create_output_path_program(), collect_step_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-remix-step', help = wording.get('help.job_remix_step'), parents = [ create_job_id_program(), create_step_index_program(), create_config_path_program(), create_jobs_path_program(), create_source_paths_program(), create_output_path_program(), collect_step_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-insert-step', help = wording.get('help.job_insert_step'), parents = [ create_job_id_program(), create_step_index_program(), create_config_path_program(), create_jobs_path_program(), create_source_paths_program(), create_target_path_program(), create_output_path_program(), collect_step_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-remove-step', help = wording.get('help.job_remove_step'), parents = [ create_job_id_program(), create_step_index_program(), create_jobs_path_program(), create_misc_program() ], formatter_class = create_help_formatter_large)
-	# job runner
-	sub_program.add_parser('job-run', help = wording.get('help.job_run'), parents = [ create_job_id_program(), create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-run-all', help = wording.get('help.job_run_all'), parents = [ create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-retry', help = wording.get('help.job_retry'), parents = [ create_job_id_program(), create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	sub_program.add_parser('job-retry-all', help = wording.get('help.job_retry_all'), parents = [ create_config_path_program(), create_temp_path_program(), create_jobs_path_program(), collect_job_program() ], formatter_class = create_help_formatter_large)
-	return ArgumentParser(parents = [ program ], formatter_class = create_help_formatter_small, add_help = True)
+    program = ArgumentParser(formatter_class=create_help_formatter_large, add_help=False)
+    program._positionals.title = 'commands'
+    program.add_argument('-v', '--version', version=metadata.get('name') + ' ' + metadata.get('version'), action='version')
+    sub_program = program.add_subparsers(dest='command')
+
+    # General commands
+    sub_program.add_parser(
+        'run',
+        help=wording.get('help.run'),
+        parents=[
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            create_source_paths_program(),
+            create_target_path_program(),
+            create_output_path_program(),
+            collect_step_program(),
+            create_uis_program(),
+            collect_job_program(),
+            create_output_quality_program(),
+            create_crop_target_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'headless-run',
+        help=wording.get('help.headless_run'),
+        parents=[
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            create_source_paths_program(),
+            create_target_path_program(),
+            create_output_path_program(),
+            collect_step_program(),
+            collect_job_program(),
+            create_output_quality_program(),
+            create_crop_target_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'batch-run',
+        help=wording.get('help.batch_run'),
+        parents=[
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            create_source_pattern_program(),
+            create_target_pattern_program(),
+            create_output_pattern_program(),
+            collect_step_program(),
+            collect_job_program(),
+            create_output_quality_program(),
+            create_crop_target_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'force-download',
+        help=wording.get('help.force_download'),
+        parents=[
+            create_download_providers_program(),
+            create_download_scope_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    # Job manager commands
+    sub_program.add_parser(
+        'job-list',
+        help=wording.get('help.job_list'),
+        parents=[
+            create_job_status_program(),
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-create',
+        help=wording.get('help.job_create'),
+        parents=[
+            create_job_id_program(),
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-submit',
+        help=wording.get('help.job_submit'),
+        parents=[
+            create_job_id_program(),
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-submit-all',
+        help=wording.get('help.job_submit_all'),
+        parents=[
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-delete',
+        help=wording.get('help.job_delete'),
+        parents=[
+            create_job_id_program(),
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-delete-all',
+        help=wording.get('help.job_delete_all'),
+        parents=[
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-add-step',
+        help=wording.get('help.job_add_step'),
+        parents=[
+            create_job_id_program(),
+            create_config_path_program(),
+            create_jobs_path_program(),
+            create_source_paths_program(),
+            create_target_path_program(),
+            create_output_path_program(),
+            collect_step_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-remix-step',
+        help=wording.get('help.job_remix_step'),
+        parents=[
+            create_job_id_program(),
+            create_step_index_program(),
+            create_config_path_program(),
+            create_jobs_path_program(),
+            create_source_paths_program(),
+            create_output_path_program(),
+            collect_step_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-insert-step',
+        help=wording.get('help.job_insert_step'),
+        parents=[
+            create_job_id_program(),
+            create_step_index_program(),
+            create_config_path_program(),
+            create_jobs_path_program(),
+            create_source_paths_program(),
+            create_target_path_program(),
+            create_output_path_program(),
+            collect_step_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-remove-step',
+        help=wording.get('help.job_remove_step'),
+        parents=[
+            create_job_id_program(),
+            create_step_index_program(),
+            create_jobs_path_program(),
+            create_misc_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    # Job runner commands
+    sub_program.add_parser(
+        'job-run',
+        help=wording.get('help.job_run'),
+        parents=[
+            create_job_id_program(),
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            collect_job_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-run-all',
+        help=wording.get('help.job_run_all'),
+        parents=[
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            collect_job_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-retry',
+        help=wording.get('help.job_retry'),
+        parents=[
+            create_job_id_program(),
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            collect_job_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    sub_program.add_parser(
+        'job-retry-all',
+        help=wording.get('help.job_retry_all'),
+        parents=[
+            create_config_path_program(),
+            create_temp_path_program(),
+            create_jobs_path_program(),
+            collect_job_program()
+        ],
+        formatter_class=create_help_formatter_large
+    )
+
+    return ArgumentParser(parents=[program], formatter_class=create_help_formatter_small, add_help=True)
+
 
 
 def apply_config_path(program : ArgumentParser) -> None:
